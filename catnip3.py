@@ -37,7 +37,9 @@ def walkimg(dir):
 
 # image path and dimensions
 def refresh(image, x, y, w):
-    os.system(f'kitty +kitten icat --clear --scale-up --place {w}x{w}@{x}x{y} "{image}"')
+    os.system(
+        f'kitty +kitten icat --clear --scale-up --place {w}x{w}@{x}x{y} "{image}"'
+    )
 
 
 def make_layout() -> Layout:
@@ -65,7 +67,7 @@ class Header:
 
 def update_pan(layout, image):
     layout["main"].update(
-        Panel(f"[bold blue]{image}", border_style="green", align="right")
+        Panel(f"[bold blue]{image}", border_style="green", title_align="right")
     )
     layout["command"].update(
         Panel(
