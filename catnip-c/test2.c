@@ -12,24 +12,6 @@ int isDirectory(const char *path) {
   return 0; // Not a directory
 }
 
-/* when return 1, scandir will put this dirent to the list */
-static int parse_ext(const struct dirent *dir) {
-  if (!dir)
-    return 0;
-
-  if (dir->d_type == DT_REG) { /* only deal with regular file */
-    const char *ext = strrchr(dir->d_name, '.');
-    if ((!ext) || (ext == dir->d_name))
-      return 0;
-    else {
-      if (strcmp(ext, ".ngl") == 0)
-        return 1;
-    }
-  }
-
-  return 0;
-}
-
 void scanDirectory(const char *dirPath) {
   DIR *dir = opendir(dirPath);
   if (!dir) {

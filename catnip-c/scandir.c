@@ -56,7 +56,7 @@ void scanDirectory(const char *dirPath, char **filePaths, int *numFiles,
 
 int main() {
   const char *directoryPath = "/home/sweet/ssd/gallery-dl";
-  int maxFiles = 10; // Initial capacity of the array
+  int maxFiles = 2000; // Initial capacity of the array
   int numFiles = 0;
   char **filePaths = malloc(maxFiles * sizeof(char *));
   scanDirectory(directoryPath, &filePaths, &numFiles, &maxFiles);
