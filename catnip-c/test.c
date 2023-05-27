@@ -119,7 +119,8 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Unknown option: %s\n", argv[i]);
             exit(1);
           }
-        } else {
+        } else if (S_ISDIR()) {
+          cwd = argv[i];
         }
       }
     }
