@@ -1,6 +1,7 @@
 #!/bin/bash
 
 dir="${1:-/home/sweet/Pictures}"
+imger="${2:-kitty +kitten icat}"
 mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
 clear
 
@@ -120,7 +121,7 @@ status_line() {
 
 read_dir() {
     # read argumented dir into an array
-    local dir="${1:-/home/sweet/Pictures}"
+    local dir="${1:-$HOME/Pictures}"
     mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
 }
 
@@ -148,7 +149,8 @@ cleanup() {
 print_menu() {
     # printf '\e7\e[%sH\e[3%s;4%sm%*s\r%s %s%s\e[m\e[%sH\e[K\e8' \
     # image="$1"
-    printf '\e7\e[%sH\e[30;41m%*s\r\e[m\e[%sH\e[K\e8' \
+    # printf '\e7\e[%sH\e[30;41m%*s\r\e[m\e[%sH\e[K\e8' \
+    printf '\e7\e[%sH\e[1;3;38;5;231;48;5;99m%*s\r\e[m\e[%sH\e[K\e8' \
            "$((LINES-1))" \
            "$COLUMNS" "" \
            "$LINES"
@@ -185,7 +187,14 @@ show_image() {
     tput cup 1 0
     
     [ -f "$image" ] && { 
-        kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
+        case "$TERM" in
+            *kitty*)
+                kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
+            ;;
+            st*)
+                chafa --clear -f sixel -s "${size}x${size}" "${image}"
+            ;;
+        esac
     }
     if [ "$show_menu" = true ]; then
         # tput cup 10 0
