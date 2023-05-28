@@ -1,7 +1,8 @@
 #!/bin/bash
 
 dir="${1:-/home/sweet/Pictures}"
-mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+# mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+mapfile -d '' array < <(fd . "$dir" -0 -tf -e gif)
 clear
 
 # size and counters
