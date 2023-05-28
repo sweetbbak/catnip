@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
+
+	"github.com/gdamore/tcell"
+	// "seehuhn.de/go/ncurses"
 )
 
 // note that its var type in (var type) and return type (var type) return_type
@@ -59,6 +63,30 @@ func find(root, ext string) []string {
 	return a
 }
 
+func show_image(path string) {
+	cmd := exec.Command("kitty", "+kitten", "icat", path)
+	out, err := cmd.Output()
+	if err != nil {
+		fmt.Println("could not run command", err)
+	}
+	fmt.Println(string(out))
+}
+
+func prep_terminal() {
+	// disable input buffering
+	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
+	// do not display entered characters on the screen
+	exec.Command("stty", "-F", "/dev/tty", "-echo").Run()
+}
+
+func garbage_keys() {
+	var b []byte = make([]byte, 1)
+	for {
+		os.Stdin.Read(b)
+		fmt.Println("I got the byte", b, "("+string(b)+")")
+	}
+}
+
 func main() {
 	flag.Parse()
 	root := flag.Arg(0)
@@ -69,48 +97,53 @@ func main() {
 	for z := range x {
 		println(x[z])
 	}
-	// Create a map to store the file extensions and their corresponding paths
-	// fileExtensions := make(map[string][]string)
+	// win := ncurses.Init()
+	// defer ncurses.EndWin()
 
-	// // Walk through the directories and sub-directories
-	// err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-	// 	if err != nil {
-	// 		return err
-	// 	}
+	i := 0
+	s, err := tcell.NewScreen()
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	// 	// Check if the current path is a file
-	// 	if !info.IsDir() {
-	// 		// Get the file extension
-	// 		ext := filepath.Ext(path)
+	if err := s.Init(); err != nil {
+		fmt.Println(err)
+	}
 
-	// 		switch ext {
-	// 		case ".jpg":
-	// 			fileExtensions[ext] = append(fileExtensions[ext], path)
-	// 		case ".png":
-	// 			fileExtensions[ext] = append(fileExtensions[ext], path)
-	// 		case ".webp":
-	// 			fileExtensions[ext] = append(fileExtensions[ext], path)
-	// 		case ".gif":
-	// 			fileExtensions[ext] = append(fileExtensions[ext], path)
+	// clear screen
+	s.Clear()
 
-	// 		}
-	// 	}
+	quit := func() { s.Fini(); os.Exit(0) }
+	defer quit()
 
-	// 	return nil
-	// })
+	// var key rune
+	for {
+		s.Show()
+		ev := s.PollEvent()
+		show_image(x[i])
+		switch ev := ev.(type) {
+		case *tcell.EventResize:
+			s.Sync()
+		case *tcell.EventKey:
+			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
+				return
+			} else if ev.Key() == tcell.KeyCtrlL {
+				s.Sync()
+			} else if ev.Rune() == 'C' || ev.Rune() == 'c' {
+				s.Clear()
+			} else if ev.Rune() == 'j' || ev.Rune() == 'j' {
+				s.Clear()
+				i++
+				fmt.Println(x[i])
+				// show_image(x[i])
+			} else if ev.Rune() == 'k' || ev.Rune() == 'K' {
+				s.Clear()
+				i++
+				fmt.Println(x[i])
+				// show_image(x[i])
+			}
 
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
+		}
 
-	// // Print out the file extensions and their corresponding paths
-	// for ext, paths := range fileExtensions {
-	// 	fmt.Printf("%s:\n", ext)
-	// 	for _, path := range paths {
-	// 		fmt.Printf("\t%s\n", path)
-	// 	}
-	// }
-	// // for _, s := range find(root, ".png") {
-	// // 	println(s)
-	// }
+	}
 }
