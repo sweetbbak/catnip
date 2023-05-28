@@ -1,0 +1,130 @@
+// use glob::glob;
+use clap::{Parser, Subcommand};
+use core::panic;
+use std::env;
+// use std::error::Error;
+// use std::io::Result;
+use std::{path::PathBuf, time::SystemTime};
+// use std::ffi::OsStr;
+// use std::path::Path;
+use walkdir::WalkDir;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+
+struct Cli {
+    /// View images in the current directory
+    #[command(subcommand)]
+    command: Option<Commands>,
+
+    /// Disable kitty image protocol
+    #[arg(short, long, default_value_t = false)]
+    disable_kitty: bool,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// List files under dir
+    Sort {
+        /// The input directory
+        #[arg(short, long)]
+        inputdir: String,
+    },
+    /// Updates catnip not implemented
+    Update {},
+    /// Runs a benchmark test
+    Benchmark {},
+}
+
+// fn glob_pngs() -> Result<(), Box<dyn Error>> {
+//     for entry in glob("**/*.png")? {
+//         println!("{}", entry?.display());
+//     }
+
+//     Ok(())
+// }
+
+// fn get_images(in_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+fn get_images(in_dir: PathBuf) -> std::result::Result<(), std::io::Error> {
+    for entry in WalkDir::new(in_dir)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        let f_name = entry.file_name().to_string_lossy();
+        // let sec = entry.metadata()?.modified()?;
+
+        if f_name.ends_with(".png") || f_name.ends_with(".jpg") || f_name.ends_with(".gif") {
+            println!("{}", f_name);
+        }
+    }
+
+    Ok(())
+}
+
+fn main() {
+    let cli = Cli::parse();
+    let start = SystemTime::now();
+
+    // collect single arg as dir if exists
+    // let args: Vec<String> = env::args().collect();
+    // if args.len() != 2 && args.len() != 3 && args.len() != 4 {
+    // if args.len() != 2 && args.len() < 3 {
+    // println!("Usage: rust-script <dir> [--list-images] [--download-images <output-dir>]");
+    // return Ok(());
+    // }
+    // let in_dir = PathBuf::from(&args[1]);
+    // if !in_dir.is_dir() {
+    // panic!("Path is not a directory: {:?}", in_dir)
+    // }
+    // let list_images = args.get(2).map_or(false, |arg| arg == "--list-images");
+    // let download_images = args.get(2).map_or(false, |arg| arg == "--download-images");
+    // let output_dir = args.get(3).map_or("", |arg| arg.as_str());
+    // get_images(in_dir);
+
+    match &cli.command {
+        Some(Commands::Sort { inputdir }) => {
+            let in_dir = PathBuf::from(inputdir);
+
+            if !in_dir.is_dir() {
+                panic!(
+                    "Provided path is not a valid directory: '{:?}' {:?}",
+                    in_dir, start
+                )
+            }
+
+            // sort_files(in_dir)
+            let end = SystemTime::now();
+            let duration = end.duration_since(start).unwrap();
+            println!("Time taken: {:?}", duration);
+            get_images(in_dir);
+        }
+
+        Some(Commands::Update { .. }) => {
+            println!("Updating... (JK not really)");
+        }
+
+        Some(Commands::Benchmark { .. }) => {
+            // let time = benchmark();
+            println!("Benchmarking")
+        }
+        None => {
+            println!("No command provided, use catnip --help for more information.");
+            let args: Vec<String> = env::args().collect();
+            if args.len() != 2 && args.len() != 3 && args.len() != 4 {
+                println!(
+                    "Usage: rust-script <url> [--list-images] [--download-images <output-dir>]"
+                );
+                // return Ok(());
+            }
+            let in_dir = PathBuf::from(&args[1]);
+            if !in_dir.is_dir() {
+                panic!("Path is not a directory: {:?}", in_dir)
+            }
+            // let list_images = args.get(2).map_or(false, |arg| arg == "--list-images");
+            // let download_images = args.get(2).map_or(false, |arg| arg == "--download-images");
+            // let output_dir = args.get(3).map_or("", |arg| arg.as_str());
+            get_images(in_dir);
+        }
+    }
+}

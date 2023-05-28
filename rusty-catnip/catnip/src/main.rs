@@ -1,50 +1,17 @@
 // use glob::glob;
-use clap::{Parser, Subcommand};
+// use clap::{Parser, Subcommand};
 use core::panic;
-// use std::error::Error;
+use std::env;
+use std::error::Error;
 // use std::io::Result;
-use std::{path::PathBuf, time::SystemTime};
+use std::fs;
+use std::path::PathBuf;
 // use std::ffi::OsStr;
 // use std::path::Path;
 use walkdir::WalkDir;
 
-#[derive(Parser)]
-#[command(author, version, about, long_about = None)]
-
-struct Cli {
-    /// View images in the current directory
-    #[command(subcommand)]
-    command: Option<Commands>,
-
-    /// Disable kitty image protocol
-    #[arg(short, long, default_value_t = false)]
-    disable_kitty: bool,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Sorts files based on file extension matching our database
-    Sort {
-        /// The input directory
-        #[arg(short, long)]
-        inputdir: String,
-    },
-    /// Updates FileSorterX to the latest version based on the github repo
-    Update {},
-    /// Note: Only run in a new empty directory. Runs a benchmark test
-    Benchmark {},
-}
-
-// fn glob_pngs() -> Result<(), Box<dyn Error>> {
-//     for entry in glob("**/*.png")? {
-//         println!("{}", entry?.display());
-//     }
-
-//     Ok(())
-// }
-
-// fn get_images(in_dir: PathBuf) -> Result<(), Box<dyn Error>> {
-fn get_images(in_dir: PathBuf) -> std::result::Result<(), std::io::Error> {
+fn get_images_old(in_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+    // fn get_images(in_dir: PathBuf) -> std::result::Result<(), std::io::Error> {
     for entry in WalkDir::new(in_dir)
         .follow_links(false)
         .into_iter()
@@ -61,35 +28,70 @@ fn get_images(in_dir: PathBuf) -> std::result::Result<(), std::io::Error> {
     Ok(())
 }
 
-fn main() {
-    let cli = Cli::parse();
-    let start = SystemTime::now();
-    match &cli.command {
-        Some(Commands::Sort { inputdir }) => {
-            let in_dir = PathBuf::from(inputdir);
-
-            if !in_dir.is_dir() {
-                panic!(
-                    "Provided path is not a valid directory: '{:?}' {:?}",
-                    in_dir, start
-                )
+fn get_images(in_dir: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    // fn get_images(in_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+    // fn get_images(in_dir: PathBuf) -> std::result::Result<(), std::io::Error> {
+    for entry in WalkDir::new(in_dir)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        // FUCK I have no idea what Im doing lmao
+        .filter_map(|path| {
+            if path.file_name().to_string_lossy().ends_with(".png") {
+                Some(path)
+            } else {
+                None
             }
+        })
+    {
+        let f_name = entry.file_name().to_string_lossy();
 
-            // sort_files(in_dir)
-            let end = SystemTime::now();
-            let duration = end.duration_since(start).unwrap();
-            println!("Time taken: {:?}", duration);
-            get_images(in_dir);
-        }
+        if f_name.ends_with(".png") || f_name.ends_with(".jpg") || f_name.ends_with(".gif") {
+            // let xxxx = std::fs::canonicalize(&f_name);
+            let xxxx = fs::canonicalize(f_name);
+            // fs::canonicalize(&in_dir + &f_name);
 
-        Some(Commands::Update { .. }) => {
-            println!("Updating... (JK not really)");
+            println!("{}", f_name);
         }
+    }
 
-        Some(Commands::Benchmark { .. }) => {
-            // let time = benchmark();
-            println!("Benchmarking")
+    Ok(())
+}
+
+fn get_csv_paths(dir: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    let paths = std::fs::read_dir(dir)?
+        // Filter out all those directory entries which couldn't be read
+        .filter_map(|res| res.ok())
+        // Map the directory entries to paths
+        .map(|dir_entry| dir_entry.path())
+        // Filter out all paths with extensions other than `csv`
+        .filter_map(|path| {
+            if path.extension().map_or(false, |ext| ext == "csv") {
+                Some(path)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    Ok(paths)
+}
+
+fn main() {
+    // collect single arg as dir if exists
+    let args: Vec<String> = env::args().collect();
+    println!("{:?}", args);
+    println!("Binary: {:?}", &args[0]);
+    println!("Argument: {:?}", &args[1]);
+
+    // if args is not empty (dumb check tbh) and less than 2
+    if !args.is_empty() && !args.len() > 2 {
+        let in_dir = PathBuf::from(&args[1]);
+        if !in_dir.is_dir() {
+            panic!("Path is not a directory: {:?}", in_dir)
         }
-        None => println!("No command provided, use catnip --help for more information."),
+        // let list_images = args.get(2).map_or(false, |arg| arg == "--list-images");
+        // let download_images = args.get(2).map_or(false, |arg| arg == "--download-images");
+        // let output_dir = args.get(3).map_or("", |arg| arg.as_str());
+        get_images(in_dir);
     }
 }
