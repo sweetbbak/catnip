@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# declare array -a -- -A is associative array
+# dumb name for an array of images
+declare -a array
+
+# 0 is Off 1 is On
+show_menu=0
+
+# Show help menu
+print_help() {
+    exe="${0##*/}"
+    echo -e "\e[3m\e[3m${exe} [OPTIONS] <Directory> \e[23m"
+    echo -e "\e[3m\e[1m\e[4mOptions:\e[23m\e[24m "
+    echo -e '    \e[3m-h, --help\e[23m'
+    echo -e '    \e[3m-f, --find\e[23m'
+    echo -e '    \e[3m-e, --ext\e[23m'
+    echo -e '    \e[3m-s, --stdin\e[23m'
+    echo -e '    \e[3m-p, --preview\e[23m'
+}
+
+cleanup() {
+    # Unhide cursor
+    # printf '\e[?25h'
+    # re-enable line wrap | unhide cursor | clear |
+    # set scroll region to default + cursor 0, 0 | restore main screen buffer
+    printf '\e[?7h\e[?25h\e[2J\e[;r\e[?1049l'
+    # restore echo input
+    stty echo
+    # restore from tput
+    tput rmcup
+    tput cnorm
+    clear
+    exit 0
+}
+
+save_terminal_state() {
+    tput smcup
+}
+
+prepare_terminal_state() {
+    stty -echo
+}
+
+unhide_cursor() {
+    printf '\e[?25h'
+}
+
+hide_curs() {
+    tput civis
+    stty -echo
+}
+
+get_term_size() {
+    read -r LINES COLUMNS < <(stty size)
+}
+
+clear_screen() {
+    printf '\e[%sH\e[9999C\e[1;%sr' \
+           "$((LINES-2))" "$LINES"
+}
+
+garbled_load_text() {
+    LC_ALL=C 
+    clear
+    for ((p=0;p<1000;p++)); do
+        tput cup 10 10
+        tput el
+        tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c 15 ; echo
+        sleep .3
+    done
+}
+
+bash_finder() {
+    # no fd or find use slow ass recursive iteration
+    bash_dir="${1}"
+    shopt -s globstar
+    for wfile in "${bash_dir}"/**/*{.png,.gif,.webp,.jpg}; do 
+        printf "%s\n" "$wfile"
+    done
+    shopt -u globstar
+}
+
+show_image() {
+    tput cup 10 10
+    tput el
+    printf "%s\n" "${array[$i]}"
+}
+
+# remove spaces and escape them. consider printf %q
+clean_image() {
+    image="${array[$i]}"
+    image="${image// /\ }"
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) print_help && exit 0 ;;
+        -f|--find) ;;
+        -e|--ext) shift && extension="$1";;
+        -s|--stdin)  ;;
+        -p|--preview) shift && img_preview="$1";;
+        *)  [ -d "$1" ] && dir="$1" ;;
+    esac
+    shift
+done
+echo "$img_preview"
+echo "$extension"
+echo "$dir"
+
+save_terminal_state
+prepare_terminal
+
+trap redraw WINCH
+trap cleanup EXIT INT SIGINT
+
+dir="${1:-/home/sweet/Pictures}"
+mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+
+while true; do
+    # if menu is set to on show it
+    if [ "$show_menu" = 1 ]; then
+        echo on
+    fi
+
+    read -r -s -n 1 key < /dev/stdin 2> /dev/null
+
+    case "$key" in
+        j) i=$((i-1)) ; clean_image ; show_image ;;
+        k) i=$((i+1)) ; clean_image ; show_image ;;
+        J) i=$((i-5)) ; clean_image ; show_image ;;
+        K) i=$((i+5)) ; clean_image ; show_image  ;;
+        h) lx=$((lx-5)) ; clean_image ; show_image ;;
+        l) lx=$((lx+5)) ; clean_image ; show_image ;;
+        m) size=$((size+5)) ; clean_image ; show_image ;;
+        n) size=$((size-5)) ; clean_image ; show_image ;;
+        f) clean_image ; feh --no-fehbg --bg-fill "$image" ;;
+        F) clean_image ; feh --bg-fill "$image" ;;
+        o) clean_image ; nsxiv "$image" ;;
+        c) tput clear && show_image ;;
+        x) clean_image && cb copy "$image" ;;
+        '') printf "%s\n" "${image}" > /dev/stdout && exit 0;;
+        q) exit 0 ;;
+    esac
+
+done
+   
