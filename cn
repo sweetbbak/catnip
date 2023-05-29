@@ -62,15 +62,37 @@ clear_screen() {
            "$((LINES-2))" "$LINES"
 }
 
+# GRADIENT + White on Background
+# for the ansi option: \e[0;38;2;r;g;bm or \e[0;48;2;r;g;bm :
+lightblu='\e[0;48;2;063;127;255m'
+blu2='\e[0;48;2;063;063;255m'
+blu3='\e[0;48;2;063;000;255m'
+purple='\e[0;48;2;063;000;191m'
+NC='\e[0m'
+
+# Gradient + Foreground'
+fg_blu_1='\e[0;38;2;127;191;255m'
+fg_blu_2='\e[0;38;2;127;127;255m'
+fg_blu_3='\e[0;38;2;127;063;255m'
+fg_blu_4='\e[0;38;2;127;000;255m'
+
+gradient() {
+    echo "$@" | fold -w5
+}
+
 garbled_load_text() {
     LC_ALL=C 
     clear
-    for ((p=0;p<1000;p++)); do
+    for ((p=0;p<50;p++)); do
         tput cup 10 10
         tput el
-        tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c 15 ; echo
-        sleep .3
+        string=$(tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c 15 ; echo)
+        # printf "%s%s%s" "${fg_blu_1}${string:5}${NC}" "${fg_blu_2}${string:6:10}${NC}" "${fg_blu_3}${string:11:15}${NC}"
+        echo -e "${fg_blu_1}${string:0:5}${NC}""${fg_blu_2}${string:5:5}${NC}""${fg_blu_3}${string:10:5}${NC}"
+        sleep .03
     done
+    tput el
+    clear_screen
 }
 
 bash_finder() {
@@ -82,6 +104,12 @@ bash_finder() {
     done
     shopt -u globstar
 }
+
+bar() {
+    mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+}
+
+assign () { local var=$1; shift; "$@" > /tmp/myfifo; read -r "${var?}" < /tmp/myfifo; }
 
 show_image() {
     tput cup 10 10
@@ -118,6 +146,7 @@ trap cleanup EXIT INT SIGINT
 
 dir="${1:-/home/sweet/Pictures}"
 mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+garbled_load_text
 
 while true; do
     # if menu is set to on show it
