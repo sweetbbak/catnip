@@ -1,10 +1,11 @@
 #!/bin/bash
 
-dir="${1:-/home/sweet/Pictures}"
-imger="${2:-kitty +kitten icat}"
-mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
-clear
+## -------[User Variables]------- ##
+# dir="${1:-/home/sweet/Pictures}"
+# mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+# clear
 
+## -------[Variables]------- ##
 # size and counters
 i=0
 x=0
@@ -13,14 +14,41 @@ lx=0
 ly=1
 
 # array var's
-array_count="${#array[@]}"
-count="(${x}/${array_count})"
+# array_count="${#array[@]}"
+# count="(${x}/${array_count})"
 
 # booleans
 show_menu=false
 
 #save screen
 # tput smcup
+
+
+find_images() {
+    # implement standard Unix find cmd
+    dir="$1"
+    extension="${2:-}"
+    [ -z "$extension" ] && extension="-e png -e jpg -e gif -e jpeg"
+    if [ -d "$dir" ]; then
+        # mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+        mapfile -d '' array < <(fd . "$dir" -0 -tf "${extension[@]}")
+    fi
+}
+
+
+array_count="${#array[@]}"
+count="(${x}/${array_count})"
+
+print_help() {
+    exe="${0##*/}"
+    echo -e "\e[3m\e[3m${exe} [OPTIONS] <Directory> \e[23m"
+    echo -e "\e[3m\e[1m\e[4mOptions:\e[23m\e[24m "
+    echo -e '    \e[3m-h, --help\e[23m'
+    echo -e '    \e[3m-f, --find\e[23m'
+    echo -e '    \e[3m-e, --ext\e[23m'
+    echo -e '    \e[3m-s, --stdin\e[23m'
+    echo -e '    \e[3m-p, --preview\e[23m'
+}
 
 setup_terminal() {
     # Setup the terminal for the TUI.
@@ -216,6 +244,21 @@ copy_img() {
         cb) cb copy "${img}" ;;
     esac
 }
+
+## -------[Arguments]------- ##
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) print_help && exit 0 ;;
+        -f|--find) ;;
+        -e|--ext) shift && extension="$1";;
+        -s|--stdin)  ;;
+        -p|--preview) shift && img_preview="$1";;
+        *)  [ -d "$1" ] && dir="$1" ;;
+    esac
+    shift
+done
+
+find_images "$dir" "$extension"
 
 trap redraw WINCH
 trap cleanup EXIT INT
