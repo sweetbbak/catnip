@@ -161,16 +161,31 @@ assign () { local var=$1; shift; "$@" > /tmp/myfifo; read -r "${var?}" < /tmp/my
 box_chars=( ╭ ╮ ╰ ╯ │ ─ )
 
 draw_box() {
-    get_term_size
-    horiz="$((COLUMNS - 1))"
-    vert="$((LINES - 1))"
+    horiz="$((COLUMNS - 2))"
+    vert="$((LINES - 2))"
     itera=1
 
+    # put corner left & right top
     tput cup 0 0 && tput el && printf "%s" "${box_chars[0]}"
     tput cup 0 "$horiz"  && printf "%s" "${box_chars[1]}"
+
+    # draw vertical lines
     while [[ "$itera" -lt "$vert" ]]; do
         tput cup "$itera" 0 && printf "%s" "${box_chars[4]}"
         tput cup "$itera" "$horiz" && printf "%s" "${box_chars[4]}"
+        itera="$(( itera + 1 ))"
+    done
+
+    itera=1
+    # put corner left & right bottom
+    # tput cup "$LINES" 0 && tput el && printf "%s" "${box_chars[2]}"
+    # tput cup "$LINES" "$COLUMNS"  && printf "%s" "${box_chars[3]}"
+    tput cup "$vert" 0 && tput el && printf "%s" "${box_chars[2]}"
+    tput cup "$vert" "$horiz"  && printf "%s" "${box_chars[3]}"
+
+    while [[ "$itera" -lt "$horiz" ]]; do
+        tput cup 0 "$itera" && printf "%s" "${box_chars[5]}"
+        tput cup "$vert" "$itera" && printf "%s" "${box_chars[5]}"
         itera="$(( itera + 1 ))"
     done
     
@@ -180,7 +195,8 @@ show_image() {
     image="${array[$i]}"
     image="${image// /\ }"
 
-    draw_box
+    get_term_size
+    # draw_box
 
     tput cup 10 10
     tput el
@@ -263,6 +279,8 @@ dir="${dir:-$HOME/Pictures}"
 mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
 garbled_load_text
 
+get_term_size
+draw_box
 while true; do
     # if menu is set to on show it
     if [ "$show_menu" = 1 ]; then
