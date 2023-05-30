@@ -129,17 +129,19 @@ gradient() {
 garbled_load_text() {
     LC_ALL=C 
     clear
-    for ((p=0;p<50;p++)); do
-        tput cup 10 10
+    yyy="$((COLUMNS / 2))"
+    xxx="$((LINES / 2))"
+
+    for ((p=0;p<20;p++)); do
+        tput cup "$xxx" "$yyy"
         tput el
         string=$(tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c 15 ; echo)
         # printf "%s%s%s" "${fg_blu_1}${string:5}${NC}" "${fg_blu_2}${string:6:10}${NC}" "${fg_blu_3}${string:11:15}${NC}"
         echo -e "${fg_blu_1}${string:0:5}${NC}""${fg_blu_2}${string:5:5}${NC}""${fg_blu_3}${string:10:5}${NC}"
         sleep .03
     done
-    tput el
-    clear_screen
     gradient "Press J or K"
+    tput dl
 }
 
 bash_finder() {
@@ -195,16 +197,13 @@ show_image() {
     image="${array[$i]}"
     image="${image// /\ }"
 
-    get_term_size
-    # draw_box
-
-    tput cup 10 10
-    tput el
+    # tput cup 10 10
+    # tput cup 1 1 ; tput ech "$((COLUMNS - 9))"
+    tput cup 1 1 ; tput ech "$((${#image}+3))"
+    # tput el
     # printf "%s\n" "${array[$i]}"
     # gradient "${array[$i]}"
     gradient "${image}"
-
-    
 }
 
 # remove spaces and escape them. consider printf %q
@@ -227,6 +226,15 @@ set_bg() {
         hyprpaper)hyprpaper "$image";;
         *) $wallpaper "$image";;
     esac
+}
+
+show_preview() {
+    # Toggle Images on and off for speed
+    if [[ "$show_pre" -eq 0 ]]; then
+        show_pre=1
+    else
+        show_pre=0
+    fi
 }
 
 # ╭───────────────────────────────╮
@@ -274,6 +282,7 @@ esac
 # │      Intitialize Program      │
 # ╰───────────────────────────────╯
 
+show_pre=0
 # dir="${1:-/home/sweet/Pictures}"
 dir="${dir:-$HOME/Pictures}"
 mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
@@ -301,6 +310,7 @@ while true; do
         F) bg_set "$image" ;;
         o) nsxiv "$image" ;;
         i) show_menu=1 ;;
+        p) show_preview ;;
         c) tput clear && show_image ;;
         x) clean_image && wl-copy "$image" ;;
         '') printf "%s\n" "${image}" > /dev/stdout && exit 0;;
