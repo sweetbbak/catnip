@@ -36,12 +36,26 @@ cleanup() {
     exit 0
 }
 
+dependency_check() {
+
+    for x in "$@"; do
+        if ! command -v "$x" &> /dev/null; then
+            return 1
+        else
+            return 0
+        fi
+    done
+}
+
 save_terminal_state() {
     tput smcup
 }
 
 prepare_terminal_state() {
-    stty -echo
+    get_term_size
+    tput smcup && clear && stty -echo
+    # printf '\e[?25l'
+    printf '\e[?1049h\e[?7l\e[?25l\e[2J\e[1;%sr' "$LINES"
 }
 
 unhide_cursor() {
@@ -99,7 +113,10 @@ gradient() {
     array_index=0
     color_index=0
     str_len="${#str}"
+    # length to cut string into and change colors
     length="$((str_len / 8))"
+
+    # color index loops in $length so if length=3 than its 0, 3, 6, 9 etc.. until string is ate up
     while [[ ! $color_index -ge $str_len ]]; do
         printf '%b' "${blu_gradient[$array_index]}${str:$color_index:$length}"
         color_index="$((color_index + length))"
@@ -122,6 +139,7 @@ garbled_load_text() {
     done
     tput el
     clear_screen
+    gradient "Press J or K"
 }
 
 bash_finder() {
@@ -141,9 +159,13 @@ bar() {
 assign () { local var=$1; shift; "$@" > /tmp/myfifo; read -r "${var?}" < /tmp/myfifo; }
 
 show_image() {
+    image="${array[$i]}"
+    image="${image// /\ }"
     tput cup 10 10
     tput el
-    printf "%s\n" "${array[$i]}"
+    # printf "%s\n" "${array[$i]}"
+    # gradient "${array[$i]}"
+    gradient "${image}"
 }
 
 # remove spaces and escape them. consider printf %q
@@ -152,6 +174,9 @@ clean_image() {
     image="${image// /\ }"
 }
 
+# ╭───────────────────────────────╮
+# │     Arguments && Defaults     │
+# ╰───────────────────────────────╯
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help) print_help && exit 0 ;;
@@ -167,13 +192,35 @@ echo "$img_preview"
 echo "$extension"
 echo "$dir"
 
+# save term state & hide cursor + opts
 save_terminal_state
-prepare_terminal
+prepare_terminal_state
 
+# handle cleanup on exit so term doesn't get borked
 trap redraw WINCH
 trap cleanup EXIT INT SIGINT
 
-dir="${1:-/home/sweet/Pictures}"
+# what find command to use
+if dependency_check fdf; then 
+    findcmd="fd"
+elif dependency_check fffind; then
+    findcmd="find"
+else
+    findcmd="bash"
+fi
+
+# need a more comprehensive terminal check for img protocol
+case "$TERM" in
+    *kitty*) img_proto="kitty" ;;
+    *) img_proto="chafa" ;;
+esac
+
+# ╭───────────────────────────────╮
+# │      Intitialize Program      │
+# ╰───────────────────────────────╯
+
+# dir="${1:-/home/sweet/Pictures}"
+dir="${dir:-$HOME/Pictures}"
 mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
 garbled_load_text
 
