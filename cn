@@ -22,17 +22,13 @@ print_help() {
 }
 
 cleanup() {
-    # Unhide cursor
-    # printf '\e[?25h'
     # re-enable line wrap | unhide cursor | clear |
     # set scroll region to default + cursor 0, 0 | restore main screen buffer
     printf '\e[?7h\e[?25h\e[2J\e[;r\e[?1049l'
     # restore echo input
     stty echo
     # restore from tput
-    tput rmcup
-    tput cnorm
-    clear
+    tput rmcup ; tput cnorm ; clear
     exit 0
 }
 
@@ -140,7 +136,7 @@ garbled_load_text() {
         echo -e "${fg_blu_1}${string:0:5}${NC}""${fg_blu_2}${string:5:5}${NC}""${fg_blu_3}${string:10:5}${NC}"
         sleep .03
     done
-    gradient "Press J or K"
+    # gradient "Press J or K"
     tput dl
 }
 
@@ -204,6 +200,11 @@ show_image() {
     # printf "%s\n" "${array[$i]}"
     # gradient "${array[$i]}"
     gradient "${image}"
+
+    if [[ "$show_pre" -eq 1 ]]; then
+        kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
+    fi
+
 }
 
 # remove spaces and escape them. consider printf %q
@@ -283,13 +284,18 @@ esac
 # ╰───────────────────────────────╯
 
 show_pre=0
-# dir="${1:-/home/sweet/Pictures}"
+x=0
+size=40
+lx=2
+ly=2
+
 dir="${dir:-$HOME/Pictures}"
 mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
-garbled_load_text
 
+garbled_load_text
 get_term_size
 draw_box
+
 while true; do
     # if menu is set to on show it
     if [ "$show_menu" = 1 ]; then
@@ -316,6 +322,5 @@ while true; do
         '') printf "%s\n" "${image}" > /dev/stdout && exit 0;;
         q) exit 0 ;;
     esac
-
 done
-   
+ 
