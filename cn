@@ -136,7 +136,7 @@ garbled_load_text() {
         sleep .02
     done
     # gradient "Press J or K"
-    tput dl
+    tput clear
 }
 
 bash_finder() {
@@ -154,8 +154,8 @@ bar() {
 }
 
 assign () { local var=$1; shift; "$@" > /tmp/myfifo; read -r "${var?}" < /tmp/myfifo; }
-
-box_chars=( ╭ ╮ ╰ ╯ │ ─ )
+	
+box_chars=( ╭ ╮ ╰ ╯ │ ─ ┑ ┎ ├ ┤ )
 
 draw_box() {
     horiz="$((COLUMNS - 2))"
@@ -166,7 +166,7 @@ draw_box() {
     tput cup 0 0 && tput el && printf "%s" "${box_chars[0]}"
     tput cup 0 "$horiz"  && printf "%s" "${box_chars[1]}"
 
-    # draw vertical lines
+    # draw vertical lines left then right
     while [[ "$itera" -lt "$vert" ]]; do
         tput cup "$itera" 0 && printf "%s" "${box_chars[4]}"
         tput cup "$itera" "$horiz" && printf "%s" "${box_chars[4]}"
@@ -175,14 +175,24 @@ draw_box() {
 
     itera=1
     # put corner left & right bottom
-    # tput cup "$LINES" 0 && tput el && printf "%s" "${box_chars[2]}"
-    # tput cup "$LINES" "$COLUMNS"  && printf "%s" "${box_chars[3]}"
     tput cup "$vert" 0 && tput el && printf "%s" "${box_chars[2]}"
     tput cup "$vert" "$horiz"  && printf "%s" "${box_chars[3]}"
 
+    # draw horizontal lines top and bottom
     while [[ "$itera" -lt "$horiz" ]]; do
         tput cup 0 "$itera" && printf "%s" "${box_chars[5]}"
         tput cup "$vert" "$itera" && printf "%s" "${box_chars[5]}"
+        itera="$(( itera + 1 ))"
+    done
+
+    # menu
+    tput cup "$((vert - 2))" 0 && tput el && printf "%s" "${box_chars[8]}"
+    tput cup "$((vert - 2))" "$((COLUMNS - 2))" && printf "%s" "${box_chars[9]}"
+
+    itera=1
+    while [[ "$itera" -lt "$horiz" ]]; do
+        tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
+        # tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
         itera="$(( itera + 1 ))"
     done
     
@@ -261,6 +271,12 @@ echo "$img_preview"
 echo "$extension"
 echo "$dir"
 
+redraw() {
+    tput clear
+    draw_box
+    show_image
+}
+
 # save term state & hide cursor + opts
 save_terminal_state
 prepare_terminal_state
@@ -288,7 +304,9 @@ esac
 # │      Intitialize Program      │
 # ╰───────────────────────────────╯
 
-show_pre=0
+show_pre=1
+cmd_mode=0
+
 x=0
 size=40
 lx=2
@@ -301,11 +319,19 @@ garbled_load_text
 get_term_size
 draw_box
 
+cmdd() {
+    tput cup "$((LINES - 3 ))" 2
+    tput cnorm
+    stty echo
+    read -e -n 20 keys
+    notify-send "$keys"
+    tput civis
+    stty -echo
+    tput cup "$((LINES - 3 ))" 2
+    tput ech 20
+}
+# ┤ ├ 
 while true; do
-    # if menu is set to on show it
-    if [ "$show_menu" = 1 ]; then
-        echo on
-    fi
 
     read -r -s -n 1 key < /dev/stdin 2> /dev/null
 
@@ -320,11 +346,11 @@ while true; do
         n) size=$((size-5)) ; show_image ;;
         F) bg_set "$image" ;;
         o) nsxiv "$image" ;;
-        i) show_menu=1 ;;
+        i) cmdd ;;
         p) show_preview ;;
         c) clear_scr && show_image ;;
         x) clean_image && wl-copy "$image" ;;
-        '') printf "%s\n" "${image}" > /dev/stdout && exit 0;;
+        '') printf "%s\n" "${image}" 2>&1 /dev/tty && exit 0;;
         q) exit 0 ;;
     esac
 done
