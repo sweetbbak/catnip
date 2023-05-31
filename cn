@@ -207,10 +207,9 @@ EOF
 show_image() {
     image="${array[$i]}"
     image="${image// /\ }"
-
     # tput cup 10 10
     # tput cup 1 1 ; tput ech "$((COLUMNS - 9))"
-    tput cup 1 1 ; tput ech "$((${#image}+3))"
+    tput cup 1 1 ; tput ech "$((${#image}+9))"
     # tput el
     # printf "%s\n" "${array[$i]}"
     # gradient "${array[$i]}"
@@ -324,7 +323,7 @@ fi
 # ╰───────────────────────────────╯
 
 show_pre=1
-cmd_mode=0
+# cmd_mode=0
 
 x=0
 size=40
@@ -338,13 +337,24 @@ garbled_load_text
 get_term_size
 draw_box
 
+search() {
+    tput cup "$((LINES / 2 + LINES / 4))" 0
+    # local XX
+    XX=$(printf "%s\n" "${array[@]}" | fzf --cycle --reverse --height=5% \
+        --preview='export i={n}' --bind 'enter:execute(printf {n} 2> /dev/stdout)+abort')
+    i="$XX"
+    image="${array[$i]}"
+    show_image
+    redraw
+}
 cmdd() {
     tput cup "$((LINES - 3 ))" 2 ; tput cnorm ; stty echo
     read -ren 33 keys
     notify-send "$keys"
     tput civis ; stty -echo ; tput cup "$((LINES - 3 ))" 2 ; tput ech 33
+    export -x i
     case "$keys" in
-        search) tput cup "$((LINES / 2 + LINES / 4))" 0 && printf "%s\n" "${array[@]}" | fzf --reverse --height=5% ;;
+        search|s) search;;
     esac
 }
 
