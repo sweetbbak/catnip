@@ -341,12 +341,18 @@ search() {
     tput cup "$((LINES / 2 + LINES / 4))" 0
     # local XX
     XX=$(printf "%s\n" "${array[@]}" | fzf --cycle --reverse --height=5% \
-        --preview='export i={n}' --bind 'enter:execute(printf {n} 2> /dev/stdout)+abort')
+        --bind 'enter:execute(printf {n} 2> /dev/stdout)+abort')
     i="$XX"
     image="${array[$i]}"
     show_image
     redraw
 }
+
+read_cmd() {
+    cmd="$(printf "%s\n" "$@")"
+    notify-send "sh -c $cmd"
+}
+
 cmdd() {
     tput cup "$((LINES - 3 ))" 2 ; tput cnorm ; stty echo
     read -ren 33 keys
@@ -354,7 +360,9 @@ cmdd() {
     tput civis ; stty -echo ; tput cup "$((LINES - 3 ))" 2 ; tput ech 33
     export -x i
     case "$keys" in
-        search|s) search;;
+        search) search ;;
+        set-bg) swww img "$image" ;;
+        *) read_cmd "$keys" "$image" ;;
     esac
 }
 
@@ -371,7 +379,7 @@ while true; do
         l) lx=$((lx+5)) ; show_image ;;
         m) size=$((size+5)) ; show_image ;;
         n) size=$((size-5)) ; show_image ;;
-        F) bg_set "$image" ;;
+        F) swww img "$image" ;;
         o) nsxiv "$image" ;;
         i) cmdd ;;
         p) show_preview ;;
