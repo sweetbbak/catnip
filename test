@@ -1,9 +1,0 @@
-#!/bin/bash
-
-dir="${dir:-$HOME/Pictures}"
-mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
-for x in "${array[@]}"; do
- echo "${x}" |rg 'silvervale' 
-done
- # grep '.png' "${array[@]}"
-

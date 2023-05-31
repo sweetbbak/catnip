@@ -255,6 +255,7 @@ show_preview() {
 
 clear_scr() {
     tput clear
+    get_term_size
     draw_box
     show_image
 }
@@ -279,6 +280,7 @@ echo "$extension"
 echo "$dir"
 
 redraw() {
+    get_term_size
     tput clear
     clear
     draw_box
