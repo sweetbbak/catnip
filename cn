@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
@@ -122,7 +122,7 @@ gradient() {
 }
 
 garbled_load_text() {
-    LC_ALL=C 
+    LC_ALL=C
     clear
     yyy="$((COLUMNS / 2))"
     xxx="$((LINES / 2))"
@@ -198,6 +198,12 @@ draw_box() {
     
 }
 
+show_version () {
+cat << EOF
+"${0##*/}" version 0.3.0
+EOF
+}
+
 show_image() {
     image="${array[$i]}"
     image="${image// /\ }"
@@ -259,10 +265,11 @@ clear_scr() {
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help) print_help && exit 0 ;;
+        -V|--version) show_version && exit 0 ;;
         -f|--find) ;;
-        -e|--ext) shift && extension="$1";;
+        -e|--ext) shift && extension="${1}";;
         -s|--stdin)  ;;
-        -p|--preview) shift && img_preview="$1";;
+        -p|--preview) shift && img_preview="${1}";;
         *)  [ -d "$1" ] && dir="$1" ;;
     esac
     shift
@@ -273,6 +280,7 @@ echo "$dir"
 
 redraw() {
     tput clear
+    clear
     draw_box
     show_image
 }
@@ -286,9 +294,9 @@ trap redraw WINCH
 trap cleanup EXIT INT SIGINT
 
 # what find command to use
-if dependency_check fdf; then 
+if dependency_check fd; then 
     findcmd="fd"
-elif dependency_check fffind; then
+elif dependency_check find; then
     findcmd="find"
 else
     findcmd="bash"
@@ -299,6 +307,15 @@ case "$TERM" in
     *kitty*) img_proto="kitty" ;;
     *) img_proto="chafa" ;;
 esac
+
+declare -a stdin=()
+if [ -t 0 ]; then
+    echo "Pipe not open" 2>/dev/null
+else
+    # else pipe is open
+    mapfile -t stdin < <(cat -)
+fi
+
 
 # ╭───────────────────────────────╮
 # │      Intitialize Program      │
@@ -320,17 +337,15 @@ get_term_size
 draw_box
 
 cmdd() {
-    tput cup "$((LINES - 3 ))" 2
-    tput cnorm
-    stty echo
-    read -e -n 20 keys
+    tput cup "$((LINES - 3 ))" 2 ; tput cnorm ; stty echo
+    read -ren 33 keys
     notify-send "$keys"
-    tput civis
-    stty -echo
-    tput cup "$((LINES - 3 ))" 2
-    tput ech 20
+    tput civis ; stty -echo ; tput cup "$((LINES - 3 ))" 2 ; tput ech 33
+    case "$keys" in
+        search) tput cup "$((LINES / 2 + LINES / 4))" 0 && printf "%s\n" "${array[@]}" | fzf --reverse --height=5% ;;
+    esac
 }
-# ┤ ├ 
+
 while true; do
 
     read -r -s -n 1 key < /dev/stdin 2> /dev/null
