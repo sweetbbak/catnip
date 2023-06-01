@@ -72,6 +72,37 @@ clear_screen() {
 }
 
 
+# ╭───────────────────────────────╮
+# │     ANSI Escape Codes         │
+# ╰───────────────────────────────╯
+
+# Cursor to absolute position
+cup() { printf '\e[%s;%sH' "$1" "$2" ; }
+# Cursor 0, 0
+cup_home() { printf '\e[H' ; }
+# Move cursor N lines <direction>
+cup_up() { printf '\e[%sA' "$1" ; }
+cup_down() { printf '\e[%sB' "$1" ; }
+cup_right() { printf '\e[%sC' "$1" ; }
+cup_left() { printf '\e[%sD' "$1" ; }
+# Save and reset cursor position
+cup_save() { printf '\e[s' ; }
+cup_restore() { printf '\e[u' ; }
+# Erase from cursor to end of line
+cup_x_eol() { printf '\e[K'; }
+# Erase from cursor to start of line
+cup_x_sol() { printf '\e[1K'; }
+# erase entire line
+cup_x_dl() { printf '\e[2K'; }
+# erase current line to bottom screen
+cup_clear_to_bottom() { printf '\e[J' ; }
+# erase current line to top screen
+cup_clear_to_top() { printf '\e[1J'; }
+# clear screen
+cup_x_clear() { printf '\e[2J'; }
+# clear screen and move to Home
+cup_screen_home() { printf '\e[2J\e[H'; }
+
 
 # GRADIENT + White on Background
 # for the ansi option: \e[0;38;2;r;g;bm or \e[0;48;2;r;g;bm :
@@ -152,11 +183,13 @@ bash_finder() {
 }
 
 bar() {
-    mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+    # mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+    fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg
 }
 
 assign () { local var=$1; shift; "$@" > /tmp/myfifo; read -r "${var?}" < /tmp/myfifo; }
-	
+# in theory we set VAR to an array asynchronously but idk im not that smart
+# assign VAR bar
 
 # ╭───────────────────────────────╮
 # │     Application Functions     │
