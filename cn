@@ -256,14 +256,22 @@ EOF
 }
 
 show_image() {
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
+
     image="${array[$i]}"
     image="${image// /\ }"
-    # tput cup 10 10
-    # tput cup 1 1 ; tput ech "$((COLUMNS - 9))"
-    tput cup 1 1 ; tput ech "$((${#image}+9))"
-    # tput el
-    # printf "%s\n" "${array[$i]}"
-    # gradient "${array[$i]}"
+    # tput cup 1 1 ; tput ech "$((${#image}+9))"
+    tput cup 1 1 ; tput ech "$((COLUMNS - 1))"
     gradient "${count} <=> ${image}"
 
     if [[ "$show_pre" -eq 1 ]]; then
@@ -310,6 +318,17 @@ clear_scr() {
     show_image
 }
 
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
 # ╭───────────────────────────────╮
 # │     Arguments && Defaults     │
 # ╰───────────────────────────────╯
@@ -337,6 +356,17 @@ redraw() {
     show_image
 }
 
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
 # save term state & hide cursor + opts
 save_terminal_state
 prepare_terminal_state
@@ -398,6 +428,17 @@ search() {
     show_image
     redraw
 }
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
 
 read_cmd() {
     cmd="$(printf "%s\n" "$@")"
@@ -420,28 +461,96 @@ while true; do
 
     read -r -s -n 1 key < /dev/stdin 2> /dev/null
     array_count="${#array[@]}"
-    count="(${x}/${array_count})"
+    count="(${i}/${array_count})"
 
-    if (( "$i" < 0 )); then
-        i=array_count
-        x=$(( i ))
-    fi
-
-    if (( "$i" > array_count )); then
-        i=0
-        x=$(( i ))
-    fi
 
     case "$key" in
         j) i=$((i-1)) ; show_image ;;
         k) i=$((i+1)) ; show_image ;;
         J) i=$((i-5)) ; show_image ;;
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
         K) i=$((i+5)) ; show_image  ;;
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
         h) lx=$((lx-5)) ; show_image ;;
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
         l) lx=$((lx+5)) ; show_image ;;
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
         m) size=$((size+5)) ; show_image ;;
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
         n) size=$((size-5)) ; show_image ;;
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
         F) swww img "$image" ;;
+    if (( i <= 0 )); then
+        i=array_count
+        show_image
+        # x=$(( i ))
+    fi
+
+    if (( i > array_count )); then
+        i=0
+        show_image
+        # x=$(( i ))
+    fi
         o) swayimg "$image" ;;
         i) cmdd ;;
         p) show_preview ;;
