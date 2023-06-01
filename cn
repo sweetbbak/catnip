@@ -358,7 +358,6 @@ cmdd() {
     read -ren 33 keys
     notify-send "$keys"
     tput civis ; stty -echo ; tput cup "$((LINES - 3 ))" 2 ; tput ech 33
-    export -x i
     case "$keys" in
         search) search ;;
         set-bg) swww img "$image" ;;
