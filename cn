@@ -257,28 +257,24 @@ EOF
 
 show_image() {
     if (( "$i" < 0 )); then
-        i=array_count
-        x=$(( i ))
+        # i=array_count
+        i="${#array[@]}"
     fi
 
     if (( "$i" > array_count )); then
         i=0
-        x=$(( i ))
     fi
+
     image="${array[$i]}"
     image="${image// /\ }"
-    # tput cup 10 10
-    tput cup 1 1 ; tput ech "$((COLUMNS - 2))"
-    # tput cup 1 1 ; tput ech "$((${#image}+9))"
-    # tput el
-    # printf "%s\n" "${array[$i]}"
-    # gradient "${array[$i]}"
+
+    tput cup 1 1 ; tput ech "$((${#image}+9))"
+    tput cup 1 1 ; tput ech "$((COLUMNS - 3))"
     gradient "${count} <=> ${image}"
 
     if [[ "$show_pre" -eq 1 ]]; then
         kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
     fi
-
 }
 
 # remove spaces and escape them. consider printf %q
@@ -325,7 +321,7 @@ clear_scr() {
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help) print_help && exit 0 ;;
-        -V|--version) show_version && exit 0 ;;
+        -v|--version) show_version && exit 0 ;;
         -f|--find) ;;
         -e|--ext) shift && extension="${1}";;
         -s|--stdin)  ;;
@@ -420,6 +416,7 @@ cmdd() {
     tput civis ; stty -echo ; tput cup "$((LINES - 3 ))" 2 ; tput ech 33
     case "$keys" in
         search) search ;;
+        fzf) search ;;
         set-bg) swww img "$image" ;;
         *) read_cmd "$keys" "$image" ;;
     esac
@@ -428,18 +425,9 @@ cmdd() {
 while true; do
 
     read -r -s -n 1 key < /dev/stdin 2> /dev/null
+
     array_count="${#array[@]}"
     count="(${i}/${array_count})"
-
-    # if (( "$i" < 0 )); then
-    #     i=array_count
-    #     x=$(( i ))
-    # fi
-
-    # if (( "$i" > array_count )); then
-    #     i=0
-    #     x=$(( i ))
-    # fi
 
     case "$key" in
         j) i=$((i-1)) ; show_image ;;
@@ -452,7 +440,8 @@ while true; do
         n) size=$((size-5)) ; show_image ;;
         F) swww img "$image" ;;
         o) swayimg "$image" ;;
-        i) cmdd ;;
+        :) cmdd ;;
+        \;) cmdd ;;
         p) show_preview ;;
         c) clear_scr && show_image ;;
         x) clean_image && wl-copy "$image" ;;
