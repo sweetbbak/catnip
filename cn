@@ -256,12 +256,12 @@ EOF
 }
 
 show_image() {
-    if (( "$i" < 0 )); then
+    if (( i < 0 )); then
         # i=array_count
         i="${#array[@]}"
     fi
 
-    if (( "$i" > array_count )); then
+    if (( i > array_count )); then
         i=0
     fi
 
@@ -445,7 +445,7 @@ while true; do
         p) show_preview ;;
         c) clear_scr && show_image ;;
         x) clean_image && wl-copy "$image" ;;
-        '') printf "%s\n" "${image}" 2>&1 /dev/stderr && exit 0;;
+        '') printf "%s\n" "${image}" 2>&1 /dev/{stdout,stderr,tty} && exit 0;;
         q) exit 0 ;;
     esac
 done
