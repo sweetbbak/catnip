@@ -264,7 +264,7 @@ show_image() {
     # tput el
     # printf "%s\n" "${array[$i]}"
     # gradient "${array[$i]}"
-    gradient "${image}"
+    gradient "${count} <=> ${image}"
 
     if [[ "$show_pre" -eq 1 ]]; then
         kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
@@ -419,6 +419,16 @@ cmdd() {
 while true; do
 
     read -r -s -n 1 key < /dev/stdin 2> /dev/null
+    array_count="${#array[@]}"
+    count="(${x}/${array_count})"
+
+    if [[ "$i" -lt 0 ]]; then
+        x=$(( i + array_count ))
+    fi
+
+    if [[ "$i" -ge 0 ]]; then
+        x=$(( i ))
+    fi
 
     case "$key" in
         j) i=$((i-1)) ; show_image ;;
