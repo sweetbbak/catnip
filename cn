@@ -422,11 +422,13 @@ while true; do
     array_count="${#array[@]}"
     count="(${x}/${array_count})"
 
-    if [[ "$i" -lt 0 ]]; then
-        x=$(( i + array_count ))
+    if (( "$i" < 0 )); then
+        i=array_count
+        x=$(( i ))
     fi
 
-    if [[ "$i" -ge 0 ]]; then
+    if (( "$i" > array_count )); then
+        i=0
         x=$(( i ))
     fi
 
