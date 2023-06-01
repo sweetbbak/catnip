@@ -379,7 +379,7 @@ while true; do
         m) size=$((size+5)) ; show_image ;;
         n) size=$((size-5)) ; show_image ;;
         F) swww img "$image" ;;
-        o) nsxiv "$image" ;;
+        o) swayimg "$image" ;;
         i) cmdd ;;
         p) show_preview ;;
         c) clear_scr && show_image ;;
