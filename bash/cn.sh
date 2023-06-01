@@ -262,7 +262,7 @@ case "$key" in
     o) clean_image ; nsxiv "$image" ;;
     c) tput clear && show_image ;;
     x) clean_image && cb copy "$image" ;;
-    '') printf "%s\n" "${image}" > /dev/stdout && exit 0;;
+    '') printf "%s\n" "${image}" 2>@1 /dev/stderr && exit 0;;
     q) exit 0 ;;
 esac
 done

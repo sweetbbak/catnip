@@ -71,6 +71,8 @@ clear_screen() {
            "$((LINES-2))" "$LINES"
 }
 
+
+
 # GRADIENT + White on Background
 # for the ansi option: \e[0;38;2;r;g;bm or \e[0;48;2;r;g;bm :
 # lightblu='\e[0;48;2;063;127;255m'
@@ -155,6 +157,11 @@ bar() {
 
 assign () { local var=$1; shift; "$@" > /tmp/myfifo; read -r "${var?}" < /tmp/myfifo; }
 	
+
+# ╭───────────────────────────────╮
+# │     Application Functions     │
+# ╰───────────────────────────────╯
+
 box_chars=( ╭ ╮ ╰ ╯ │ ─ ┑ ┎ ├ ┤ )
 
 draw_box() {
@@ -167,10 +174,14 @@ draw_box() {
     tput cup 0 "$horiz"  && printf "%s" "${box_chars[1]}"
 
     # draw vertical lines left then right
-    while [[ "$itera" -lt "$vert" ]]; do
+    # while [[ "$itera" -lt "$vert" ]]; do
+    #     tput cup "$itera" 0 && printf "%s" "${box_chars[4]}"
+    #     tput cup "$itera" "$horiz" && printf "%s" "${box_chars[4]}"
+    #     itera="$(( itera + 1 ))"
+    # done
+    for ((itera=1; itera<vert;itera++)); do
         tput cup "$itera" 0 && printf "%s" "${box_chars[4]}"
         tput cup "$itera" "$horiz" && printf "%s" "${box_chars[4]}"
-        itera="$(( itera + 1 ))"
     done
 
     itera=1
@@ -179,22 +190,29 @@ draw_box() {
     tput cup "$vert" "$horiz"  && printf "%s" "${box_chars[3]}"
 
     # draw horizontal lines top and bottom
-    while [[ "$itera" -lt "$horiz" ]]; do
+    # while [[ "$itera" -lt "$horiz" ]]; do
+    #     tput cup 0 "$itera" && printf "%s" "${box_chars[5]}"
+    #     tput cup "$vert" "$itera" && printf "%s" "${box_chars[5]}"
+    #     itera="$(( itera + 1 ))"
+    # done
+    tput cup "$((vert - 2))" 0 && tput el && printf "%s" "${box_chars[8]}"
+    tput cup "$((vert - 2))" "$((COLUMNS - 2))" && printf "%s" "${box_chars[9]}"
+    for ((itera=1; itera<horiz;itera++)); do
         tput cup 0 "$itera" && printf "%s" "${box_chars[5]}"
         tput cup "$vert" "$itera" && printf "%s" "${box_chars[5]}"
-        itera="$(( itera + 1 ))"
+        tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
     done
 
     # menu
-    tput cup "$((vert - 2))" 0 && tput el && printf "%s" "${box_chars[8]}"
-    tput cup "$((vert - 2))" "$((COLUMNS - 2))" && printf "%s" "${box_chars[9]}"
+    # tput cup "$((vert - 2))" 0 && tput el && printf "%s" "${box_chars[8]}"
+    # tput cup "$((vert - 2))" "$((COLUMNS - 2))" && printf "%s" "${box_chars[9]}"
 
-    itera=1
-    while [[ "$itera" -lt "$horiz" ]]; do
-        tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
-        # tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
-        itera="$(( itera + 1 ))"
-    done
+    # itera=1
+    # while [[ "$itera" -lt "$horiz" ]]; do
+    #     tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
+    #     # tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
+    #     itera="$(( itera + 1 ))"
+    # done
     
 }
 
