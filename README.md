@@ -8,10 +8,6 @@
 
 ---
 
-### older minimal version
-
-## ![](new.gif)
-
 ## Features
 
 - pick an image lol
