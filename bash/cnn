@@ -256,20 +256,11 @@ EOF
 }
 
 show_image() {
-    if (( "$i" < 0 )); then
-        i=array_count
-        x=$(( i ))
-    fi
-
-    if (( "$i" > array_count )); then
-        i=0
-        x=$(( i ))
-    fi
     image="${array[$i]}"
     image="${image// /\ }"
     # tput cup 10 10
-    tput cup 1 1 ; tput ech "$((COLUMNS - 2))"
-    # tput cup 1 1 ; tput ech "$((${#image}+9))"
+    # tput cup 1 1 ; tput ech "$((COLUMNS - 9))"
+    tput cup 1 1 ; tput ech "$((${#image}+9))"
     # tput el
     # printf "%s\n" "${array[$i]}"
     # gradient "${array[$i]}"
@@ -431,15 +422,15 @@ while true; do
     array_count="${#array[@]}"
     count="(${x}/${array_count})"
 
-    # if (( "$i" < 0 )); then
-    #     i=array_count
-    #     x=$(( i ))
-    # fi
+    if (( "$i" < 0 )); then
+        i=array_count
+        x=$(( i ))
+    fi
 
-    # if (( "$i" > array_count )); then
-    #     i=0
-    #     x=$(( i ))
-    # fi
+    if (( "$i" > array_count )); then
+        i=0
+        x=$(( i ))
+    fi
 
     case "$key" in
         j) i=$((i-1)) ; show_image ;;
