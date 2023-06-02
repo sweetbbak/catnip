@@ -201,6 +201,17 @@ draw_box() {
     horiz="$((COLUMNS - 2))"
     vert="$((LINES - 2))"
     itera=1
+    box_char1="╭"
+    box_char2="╮"
+    box_char3="╰"
+    box_char4="╯"
+    box_char5="│"
+    box_char6="─"
+    box_char7="┑"
+    box_char8="┎"
+    box_char9="├"
+    box_char10="┤"
+    
 
     # put corner left & right top
     tput cup 0 0 && tput el && printf "%s" "${box_chars[0]}"
@@ -212,7 +223,7 @@ draw_box() {
     #     tput cup "$itera" "$horiz" && printf "%s" "${box_chars[4]}"
     #     itera="$(( itera + 1 ))"
     # done
-    for ((itera=1; itera<vert;itera++)); do
+    for ((itera=1; itera<vert; itera++)); do
         tput cup "$itera" 0 && printf "%s" "${box_chars[4]}"
         tput cup "$itera" "$horiz" && printf "%s" "${box_chars[4]}"
     done
@@ -230,7 +241,7 @@ draw_box() {
     # done
     tput cup "$((vert - 2))" 0 && tput el && printf "%s" "${box_chars[8]}"
     tput cup "$((vert - 2))" "$((COLUMNS - 2))" && printf "%s" "${box_chars[9]}"
-    for ((itera=1; itera<horiz;itera++)); do
+    for ((itera=1; itera<horiz; itera++)); do
         tput cup 0 "$itera" && printf "%s" "${box_chars[5]}"
         tput cup "$vert" "$itera" && printf "%s" "${box_chars[5]}"
         tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
@@ -261,14 +272,14 @@ show_image() {
         i="${#array[@]}"
     fi
 
-    if (( i > array_count )); then
+    if (( i = array_count )); then
         i=0
     fi
 
     image="${array[$i]}"
     image="${image// /\ }"
 
-    tput cup 1 1 ; tput ech "$((${#image}+9))"
+    # tput cup 1 1 ; tput ech "$((${#image}+9))"
     tput cup 1 1 ; tput ech "$((COLUMNS - 3))"
     gradient "${count} <=> ${image}"
 
@@ -395,7 +406,6 @@ draw_box
 
 search() {
     tput cup "$((LINES / 2 + LINES / 4))" 0
-    # local XX
     XX=$(printf "%s\n" "${array[@]}" | fzf --cycle --reverse --height=5% \
         --bind 'enter:execute(printf {n} 2> /dev/stdout)+abort')
     i="$XX"
@@ -424,7 +434,7 @@ cmdd() {
 
 while true; do
 
-    read -r -s -n 1 key < /dev/stdin 2> /dev/null
+    read -r -s -N 1 key < /dev/stdin 2> /dev/null
 
     array_count="${#array[@]}"
     count="(${i}/${array_count})"
@@ -440,12 +450,14 @@ while true; do
         n) size=$((size-5)) ; show_image ;;
         F) swww img "$image" ;;
         o) swayimg "$image" ;;
+        i) cmdd ;;
         :) cmdd ;;
         \;) cmdd ;;
         p) show_preview ;;
         c) clear_scr && show_image ;;
+        $' ') show_menu=1 ;;
         x) clean_image && wl-copy "$image" ;;
-        '') printf "%s\n" "${image}" 2>&1 /dev/{stdout,stderr,tty} && exit 0;;
+        $'\n') printf "%s\n" "${image}" 2>&1 /dev/{stdout,stderr,tty} && exit 0;;
         q) exit 0 ;;
     esac
 done

@@ -8,6 +8,10 @@
 
 ---
 
+## Installation
+
+> curl https://raw.githubusercontent.com/sweetbbak/catnip/main/cn > ~/bin/cn && chmod +x ~/bin/cn
+
 ## Features
 
 - pick an image lol
