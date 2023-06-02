@@ -319,7 +319,7 @@ show_image() {
         i="${#array[@]}"
     fi
 
-    if (( i = array_count )); then
+    if (( i >= array_count )); then
         i=0
     fi
 
