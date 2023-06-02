@@ -4,13 +4,32 @@
 
 ---
 
-## ![](example.mp4)
+## ![](images/out.gif)
+
+- pick images from any directory (cn ~/Pictures/backgrounds || cn .)
+
+---
+
+## ![](images/out1.gif)
+
+- open in an external program (swww, feh, nitrogen, swayimg, nsxiv etc...)
+
+---
+
+## ![](images/out2.gif)
+
+- Run commands on an image - :fzf - lets you fuzzy find through your selected images
+- integration with other TUI's and CLI's (fzf, fd, ripgrep/grep, imagemagick)
 
 ---
 
 ## Installation
 
+```
+
 > curl https://raw.githubusercontent.com/sweetbbak/catnip/main/cn > ~/bin/cn && chmod +x ~/bin/cn
+
+```
 
 ## Features
 
@@ -38,9 +57,27 @@ like fzf, kitty's icat, chafa, sixel etc...
 
 ## Requirements
 
-- Kitty or Sixel
-- tput and other bash coreutils
+- Kitty or Sixel capable terminal (icat and chafa currently used, will phase out later)
+- bash coreutils
+- Perl (to be removed, used twice for actually fast Unicode printing lmk if you know a better way)
+- Ncurses
+- Linux core utilities
+- tput (currently phasing out in favor of ANSI escape codes)
 - <3
+
+### Optional
+
+- fzf
+- Nsxiv, Sxiv, Swayimg, etc...
+- swwww, feh, nitrogen, mpv
+
+## To do
+
+- rewrite in completely POSIX compliant shell (or generally portable bash)
+- potential rewrite in a compiled language
+- add more comprehensive error checking
+- optimization of drawing unicode characters and everything else
+- add support for more external programs
 
 ## DISCLAIMER
 
