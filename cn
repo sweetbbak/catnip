@@ -11,8 +11,10 @@ show_menu=0
 
 # Show help menu
 print_help() {
+    echo -e '\n '
     exe="${0##*/}"
     echo -e "\e[3m\e[3m${exe} [OPTIONS] <Directory> \e[23m"
+    echo -e '\n '
     echo -e "\e[3m\e[1m\e[4mOptions:\e[23m\e[24m "
     echo -e '    \e[3m-h, --help\e[23m'
     echo -e '    \e[3m-f, --find\e[23m'
@@ -467,10 +469,10 @@ read_cmd() {
 }
 
 cmdd() {
-    tput cup "$((LINES - 3 ))" 2 ; tput cnorm ; stty echo
+    tput cup "$((LINES - 2 ))" 2 ; tput cnorm ; stty echo
     read -ren 33 keys
     notify-send "$keys"
-    tput civis ; stty -echo ; tput cup "$((LINES - 3 ))" 2 ; tput ech 33
+    tput civis ; stty -echo ; tput cup "$((LINES - 2 ))" 2 ; tput ech 33
     case "$keys" in
         search) search ;;
         fzf) search ;;
