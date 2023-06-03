@@ -17,11 +17,18 @@ print_help() {
     echo -e "\e[3m\e[3m${exe} [OPTIONS] <Directory> \e[23m"
     echo -e '\n '
     echo -e "\e[3m\e[1m\e[4mOptions:\e[23m\e[24m "
-    echo -e '    \e[3m-h, --help\e[23m'
-    echo -e '    \e[3m-f, --find\e[23m'
-    echo -e '    \e[3m-e, --ext\e[23m'
-    echo -e '    \e[3m-s, --stdin\e[23m'
-    echo -e '    \e[3m-p, --preview\e[23m'
+    echo -e '    \e[3m-h, --help\e[23m
+            Show help text'
+    echo -e '    \e[3m-u, --update\e[23m    
+            Back script up if you have made personal changes'
+    echo -e '    \e[3m-f, --find\e[23m
+            Command to use for finding images'
+    echo -e '    \e[3m-e, --ext\e[23m
+            Extensions types to search the given directory for'
+    echo -e '    \e[3m-s, --stdin\e[23m
+            (Not Implemented, opt for auto-detect) Read from stdin'
+    echo -e '    \e[3m-p, --preview\e[23m
+            Manually set preview method <kitty, sixel, chafa, ascii>'
 }
 
 cleanup() {
