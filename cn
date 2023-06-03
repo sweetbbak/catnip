@@ -8,6 +8,7 @@ declare -a array
 
 # 0 is Off 1 is On
 show_menu=0
+trap - SIGPIPE
 
 # Show help menu
 print_help() {
@@ -73,13 +74,25 @@ clear_screen() {
            "$((LINES-2))" "$LINES"
 }
 
-update_script(){
-    readonly THISDIR=$(cd "$(dirname "$0")" ; pwd)
-    readonly MY_NAME=$(basename "$0")
-    readonly FILE_TO_FETCH_URL="https://raw.githubusercontent.com/sweetbbak/catnip/main/cn"
-    readonly EXISTING_SHELL_SCRIPT="${THISDIR}/somescript.sh"
-    readonly EXECUTABLE_SHELL_SCRIPT="${THISDIR}/.somescript.sh"
-    
+dep_ch() {
+	for dep; do
+		command -v "$dep" >/dev/null || notify-send "Program \"$dep\" not found. Please install it."
+	done
+}
+
+update_script() {
+	update=$(curl -s "https://raw.githubusercontent.com/sweetbbak/catnip/main/cn" || sfdfdf "Connection error")
+	update="$(printf '%s\n' "$update" | diff -u "$(which cn)" -)"
+	if [ -z "$update" ]; then
+		printf "Script is up to date :)\n"
+	else
+		if printf '%s\n' "$update" | patch "$(which cn)" -; then
+			printf "Script has been updated\n"
+		else
+			printf "Can't update for some reason!\n"
+		fi
+	fi
+	exit 0
 }
 
 # ╭───────────────────────────────╮
@@ -167,16 +180,30 @@ gradient() {
 garbled_load_text() {
     LC_ALL=C
     clear
-    yyy="$((COLUMNS / 2))"
+    local strlen
+    strlen=100
+    yyy="$((COLUMNS / 2 - $((strlen / 2))))"
     xxx="$((LINES / 2))"
 
     for ((p=0;p<20;p++)); do
-        tput cup "$xxx" "$yyy"
         tput el
-        string=$(tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c 15 ; echo)
-        # printf "%s%s%s" "${fg_blu_1}${string:5}${NC}" "${fg_blu_2}${string:6:10}${NC}" "${fg_blu_3}${string:11:15}${NC}"
-        echo -e "${fg_blu_1}${string:0:5}${NC}""${fg_blu_2}${string:5:5}${NC}""${fg_blu_3}${string:10:5}${NC}"
-        sleep .02
+        string=$(tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c "$strlen" ; echo)
+
+        tput cup "$xxx" "$yyy"
+        gradient "$string"
+
+        tput cup "$((xxx+1))" "$yyy"
+        gradient "$string"
+
+        tput cup "$((xxx+2))" "$yyy"
+        gradient "Loading ... Catnip"
+
+        tput cup "$((xxx+3))" "$yyy"
+        gradient "$string"
+
+        tput cup "$((xxx+4))" "$yyy"
+        gradient "$string"
+        sleep .03
     done
     # gradient "Press J or K"
     tput clear
@@ -205,73 +232,6 @@ assign () { local var=$1; shift; "$@" > /tmp/myfifo; read -r "${var?}" < /tmp/my
 # │     Application Functions     │
 # ╰───────────────────────────────╯
 
-# box_chars=( ╭ ╮ ╰ ╯ │ ─ ┑ ┎ ├ ┤ )
-
-# draw_box() {
-#     horiz="$((COLUMNS - 2))"
-#     vert="$((LINES - 2))"
-#     itera=1
-#     box_char0="╭"
-#     box_char1="╮"
-#     box_char2="╰"
-#     box_char3="╯"
-#     box_char4="│"
-#     box_char5="─"
-#     box_char6="┑"
-#     box_char7="┎"
-#     box_char8="├"
-#     box_char9="┤"
-    
-
-#     # put corner left & right top
-#     # tput cup 0 0 && tput el && printf "%s" "${box_chars[0]}"
-#     # tput cup 0 "$horiz"  && printf "%s" "${box_chars[1]}"
-#     tput cup 0 0 && tput el && printf "%s" "${box_char0}"
-#     tput cup 0 "$horiz"  && printf "%s" "${box_char1}"
-
-#     # draw vertical lines left then right
-#     # while [[ "$itera" -lt "$vert" ]]; do
-#     #     tput cup "$itera" 0 && printf "%s" "${box_chars[4]}"
-#     #     tput cup "$itera" "$horiz" && printf "%s" "${box_chars[4]}"
-#     #     itera="$(( itera + 1 ))"
-#     # done
-#     for ((itera=1; itera<vert; itera++)); do
-#         tput cup "$itera" 0 && printf "%s" "${box_char4}"
-#         tput cup "$itera" "$horiz" && printf "%s" "${box_char4}"
-#     done
-
-#     itera=1
-#     # put corner left & right bottom
-#     tput cup "$vert" 0 && tput el && printf "%s" "${box_char2}"
-#     tput cup "$vert" "$horiz"  && printf "%s" "${box_char3}"
-
-#     # draw horizontal lines top and bottom
-#     # while [[ "$itera" -lt "$horiz" ]]; do
-#     #     tput cup 0 "$itera" && printf "%s" "${box_chars[5]}"
-#     #     tput cup "$vert" "$itera" && printf "%s" "${box_chars[5]}"
-#     #     itera="$(( itera + 1 ))"
-#     # done
-#     tput cup "$((vert - 2))" 0 && tput el && printf "%s" "${box_char8}"
-#     tput cup "$((vert - 2))" "$((COLUMNS - 2))" && printf "%s" "${box_char9}"
-#     for ((itera=1; itera<horiz; itera++)); do
-#         tput cup 0 "$itera" && printf "%s" "${box_char5}"
-#         tput cup "$vert" "$itera" && printf "%s" "${box_char5}"
-#         tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_char5}"
-#     done
-
-#     # menu
-#     # tput cup "$((vert - 2))" 0 && tput el && printf "%s" "${box_chars[8]}"
-#     # tput cup "$((vert - 2))" "$((COLUMNS - 2))" && printf "%s" "${box_chars[9]}"
-
-#     # itera=1
-#     # while [[ "$itera" -lt "$horiz" ]]; do
-#     #     tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
-#     #     # tput cup "$((vert - 2))" "$itera" && printf "%s" "${box_chars[5]}"
-#     #     itera="$(( itera + 1 ))"
-#     # done
-    
-# }
-
 draw_box() {
     tput clear
     get_term_size
@@ -290,7 +250,6 @@ draw_box() {
     # box_char7="┎"
     # box_char8="├"
     # box_char9="┤"
-    
 
     # put corner left & right top
     # and then top line
@@ -316,6 +275,11 @@ draw_box() {
     perl -E "print '─' x $horiz"
     cup_right 1 && printf '┤'
 }
+
+draw_menu() {
+    ls
+}
+
 
 show_version () {
 cat << EOF
@@ -491,30 +455,33 @@ cmdd() {
 
 while true; do
 
-    read -r -s -N 1 key < /dev/stdin 2> /dev/null
+    read -r -s -N1 key < /dev/stdin 2> /dev/null
 
     array_count="${#array[@]}"
     count="(${i}/${array_count})"
 
     case "$key" in
-        j) i=$((i-1)) ; show_image ;;
-        k) i=$((i+1)) ; show_image ;;
+        j|$'\x1b\x5b\x41') i=$((i-1)) ; show_image ;;
+        k|$'\x1b\x5b\x42') i=$((i+1)) ; show_image ;;
         J) i=$((i-5)) ; show_image ;;
         K) i=$((i+5)) ; show_image  ;;
+
         h) lx=$((lx-5)) ; show_image ;;
         l) lx=$((lx+5)) ; show_image ;;
+
         m) size=$((size+5)) ; show_image ;;
         n) size=$((size-5)) ; show_image ;;
-        F) swww img "$image" ;;
-        o) swayimg "$image" ;;
-        i) cmdd ;;
-        :) cmdd ;;
-        \;) cmdd ;;
-        p) show_preview ;;
+        $' '|$'\x20') show_menu=1 ;; # space key
+        # $'\x1b') echo Escape Key ;; # escape key
+        i|:|\;) cmdd ;; # insert
+
+        p) show_preview ;; # toggle preview on/off
+        F) swww img "$image" ;; # set as background
+        o) swayimg "$image" ;; # open externally
         c) clear_scr && show_image ;;
-        $' ') show_menu=1 ;;
         x) clean_image && wl-copy "$image" ;;
-        $'\n') printf "%s\n" "${image}" 2>&1 /dev/{stdout,stderr,tty} && exit 0;;
+
+        $'\n'|$'\x0a') printf "%s\n" "${image}" 2>&1 /dev/{stdout,stderr,tty} && exit 0;;
         q) exit 0 ;;
     esac
 done

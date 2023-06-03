@@ -73,6 +73,14 @@ clear_screen() {
            "$((LINES-2))" "$LINES"
 }
 
+update_script(){
+    readonly THISDIR=$(cd "$(dirname "$0")" ; pwd)
+    readonly MY_NAME=$(basename "$0")
+    readonly FILE_TO_FETCH_URL="https://raw.githubusercontent.com/sweetbbak/catnip/main/cn"
+    readonly EXISTING_SHELL_SCRIPT="${THISDIR}/somescript.sh"
+    readonly EXECUTABLE_SHELL_SCRIPT="${THISDIR}/.somescript.sh"
+    
+}
 
 # ╭───────────────────────────────╮
 # │     ANSI Escape Codes         │
