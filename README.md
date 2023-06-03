@@ -84,8 +84,3 @@ like fzf, kitty's icat, chafa, sixel etc...
 I've only been programming for less than one year and I still have no idea what the hell
 I'm doing most of the time. As such this code is subject to be absolute garbage. Still,
 thanks for visiting <3
-
-also sometimes people ask me if my code is licensed, and it kind of touches my heart that people
-make it a point to respect that, but no lol why would I license this chicken scratch? take it, steal it,
-re-distribute it via writing on the inside of bathroom stalls, it's up to you. Though, I do like the "Poet license"
-and "Beer-ware" its all open but if you enjoy it or find it useful, consider buying me a beer/coffee.
