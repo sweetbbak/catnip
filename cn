@@ -168,7 +168,7 @@ gradient() {
     length="$((str_len / 8))"
 
     # color index loops in $length so if length=3 than its 0, 3, 6, 9 etc.. until string is ate up
-    while [[ ! $color_index -ge $str_len ]]; do
+    while [[ $color_index -le $str_len ]]; do
         printf '%b' "${blu_gradient[$array_index]}${str:$color_index:$length}"
         color_index="$((color_index + length))"
         array_index="$((array_index + 1))"
@@ -181,7 +181,9 @@ garbled_load_text() {
     LC_ALL=C
     clear
     local strlen
-    strlen=100
+    # strlen=100
+    strlen=$COLUMNS
+
     yyy="$((COLUMNS / 2 - $((strlen / 2))))"
     xxx="$((LINES / 2))"
 
@@ -305,7 +307,21 @@ show_image() {
     gradient "${count} <=> ${image}"
 
     if [[ "$show_pre" -eq 1 ]]; then
-        kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
+        case "$img_protocol" in
+        kitty)
+            kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
+            ;;
+        sixel|chafa)
+            # need a new menu system for chafa unfortunately cant clear properly and draw menu
+            tput cup 3 3 && chafa -c full -f sixels -s "${size}x${size}" "${image}"
+            ;;
+        iterm)
+            tput cup 3 3 && chafa -c full -f iterm -s "${size}x${size}" "${image}"
+            ;;
+        ascii)
+            tput cup 3 3 && chafa -s "${size}x${size}" "${image}"
+            ;;
+        esac
     fi
 }
 
@@ -357,14 +373,11 @@ while [ $# -gt 0 ]; do
         -f|--find) ;;
         -e|--ext) shift && extension="${1}";;
         -s|--stdin)  ;;
-        -p|--preview) shift && img_preview="${1}";;
+        -p|--preview) shift && img_protocol="${1}";;
         *)  [ -d "$1" ] && dir="$1" ;;
     esac
     shift
 done
-echo "$img_preview"
-echo "$extension"
-echo "$dir"
 
 redraw() {
     get_term_size
@@ -393,18 +406,73 @@ fi
 
 # need a more comprehensive terminal check for img protocol
 case "$TERM" in
-    *kitty*) img_proto="kitty" ;;
-    *) img_proto="chafa" ;;
+    *kitty*) img_protocol="kitty" ;;
+    *) img_protocol="chafa" ;;
 esac
 
-declare -a stdin=()
+dir="${dir:-$HOME/Pictures}"
+declare -a array=()
+
 if [ -t 0 ]; then
     echo "Pipe not open" 2>/dev/null
+    mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
 else
     # else pipe is open
-    mapfile -t stdin < <(cat -)
+    mapfile -t array < <(cat -)
+    exec 0<&-
 fi
 
+# ╭───────────────────────────────╮
+# │      UI Commands              │
+# ╰───────────────────────────────╯
+
+search() {
+    tput cup "$((LINES / 2 + LINES / 4))" 0
+    XX=$(printf "%s\n" "${array[@]}" | fzf --cycle --reverse --height=5% \
+        --bind 'enter:execute(printf {n} 2> /dev/stdout)+abort')
+    i="$XX"
+    image="${array[$i]}"
+    show_image
+    redraw
+}
+
+find_images() {
+    case "$findcmd" in 
+        fd) ;;
+        find) ;;
+        bash) ;;
+    esac
+}
+
+pick-dir() {
+    directory="${2:-$HOME}"
+
+    tput cup "$((LINES / 2 + LINES / 4))" 0
+    dirpick=$(fd . "$directory" -td --absolute-path | fzf --cycle --reverse --height=5% \
+        --bind 'enter:execute(printf {} 2> /dev/stdout)+abort')
+    find_images "$dirpick"
+    show_image
+    redraw
+}
+
+read_cmd() {
+    cmd="$(printf "%s\n" "$@")"
+    notify-send "sh -c $cmd"
+}
+
+cmdd() {
+    tput cup "$((LINES - 2 ))" 2 ; tput cnorm ; stty echo
+    read -ren 33 keys
+    tput civis ; stty -echo ; tput cup "$((LINES - 2 ))" 2 ; tput ech 33
+    case "$keys" in
+        search) search ;;
+        fzf) search ;;
+        cd*) pick-dir "$keys" ;;
+        set-bg) set_bg "$wallpaper" ;;
+        test) read_cmd "$keys" "$image" ;;
+        *) read_cmd "$keys" "$image" ;;
+    esac
+}
 
 # ╭───────────────────────────────╮
 # │      Intitialize Program      │
@@ -418,43 +486,13 @@ size=40
 lx=2
 ly=2
 
-dir="${dir:-$HOME/Pictures}"
-mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
-
-garbled_load_text
 get_term_size
+garbled_load_text
 draw_box
-
-search() {
-    tput cup "$((LINES / 2 + LINES / 4))" 0
-    XX=$(printf "%s\n" "${array[@]}" | fzf --cycle --reverse --height=5% \
-        --bind 'enter:execute(printf {n} 2> /dev/stdout)+abort')
-    i="$XX"
-    image="${array[$i]}"
-    show_image
-    redraw
-}
-
-read_cmd() {
-    cmd="$(printf "%s\n" "$@")"
-    notify-send "sh -c $cmd"
-}
-
-cmdd() {
-    tput cup "$((LINES - 2 ))" 2 ; tput cnorm ; stty echo
-    read -ren 33 keys
-    notify-send "$keys"
-    tput civis ; stty -echo ; tput cup "$((LINES - 2 ))" 2 ; tput ech 33
-    case "$keys" in
-        search) search ;;
-        fzf) search ;;
-        set-bg) swww img "$image" ;;
-        *) read_cmd "$keys" "$image" ;;
-    esac
-}
 
 while true; do
 
+    sleep .01
     read -r -s -N1 key < /dev/stdin 2> /dev/null
 
     array_count="${#array[@]}"
