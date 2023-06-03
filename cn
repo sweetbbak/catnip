@@ -437,11 +437,19 @@ search() {
 }
 
 find_images() {
+    unset array
     case "$findcmd" in 
-        fd) ;;
-        find) ;;
-        bash) ;;
+        fd)  
+        mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+        ;;
+        find) 
+        mapfile array < <(find "$dir" -type f \( -iname \*.jpg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \))
+        ;;
+        bash) 
+        mapfile array < <(bash -c "cd ~/Pictures && shopt -s globstar dotglob; stat --format \"~/Pictures/%n\" -- **/*.{jpg,png,gif} | sort -rn")
+        ;;
     esac
+    redraw
 }
 
 pick-dir() {
