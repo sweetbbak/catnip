@@ -19,12 +19,15 @@ print_help() {
     echo -e "\e[3m\e[1m\e[4mOptions:\e[23m\e[24m "
     echo -e '    \e[3m-h, --help\e[23m
             Show help text'
+    echo -e '    \e[3m-v, --version\e[23m
+            Print version information'
     echo -e '    \e[3m-u, --update\e[23m    
-            Back script up if you have made personal changes'
+            Update from github - back the script up if you have made personal changes'
     echo -e '    \e[3m-f, --find\e[23m
-            Command to use for finding images'
+            Command to use for finding images <fd, find, bash>'
     echo -e '    \e[3m-e, --ext\e[23m
-            Extensions types to search the given directory for'
+            Extensions types to search the given directory for
+            example cn -e png -e webp -e gif [options] <directory>'
     echo -e '    \e[3m-s, --stdin\e[23m
             (Not Implemented, opt for auto-detect) Read from stdin'
     echo -e '    \e[3m-p, --preview\e[23m
@@ -50,6 +53,12 @@ dependency_check() {
             return 0
         fi
     done
+}
+
+dep_ch() {
+	for dep; do
+		command -v "$dep" >/dev/null || notify-send "Program \"$dep\" not found. Please install it."
+	done
 }
 
 save_terminal_state() {
@@ -81,12 +90,6 @@ clear_screen() {
            "$((LINES-2))" "$LINES"
 }
 
-dep_ch() {
-	for dep; do
-		command -v "$dep" >/dev/null || notify-send "Program \"$dep\" not found. Please install it."
-	done
-}
-
 update_script() {
 	update=$(curl -s "https://raw.githubusercontent.com/sweetbbak/catnip/main/cn" || sfdfdf "Connection error")
 	update="$(printf '%s\n' "$update" | diff -u "$(which cn)" -)"
@@ -100,6 +103,19 @@ update_script() {
 		fi
 	fi
 	exit 0
+}
+
+# function to check if a given value exists in a given array
+in_array() {
+    local haystack="${1}[@]"
+    local needle=${2}
+
+    for i in ${!haystack}; do
+        if [[ ${i} == "${needle}" ]]; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 # ╭───────────────────────────────╮
@@ -140,12 +156,12 @@ cup_screen_home() { printf '\e[2J\e[H'; }
 # blu2='\e[0;48;2;063;063;255m'
 # blu3='\e[0;48;2;063;000;255m'
 # purple='\e[0;48;2;063;000;191m'
-NC='\e[0m'
+# NC='\e[0m'
 
 # Gradient + Foreground'
-fg_blu_1='\e[0;38;2;127;191;255m' # lightest
-fg_blu_2='\e[0;38;2;127;127;255m'
-fg_blu_3='\e[0;38;2;127;063;255m'
+# fg_blu_1='\e[0;38;2;127;191;255m' # lightest
+# fg_blu_2='\e[0;38;2;127;127;255m'
+# fg_blu_3='\e[0;38;2;127;063;255m'
 # fg_blu_4='\e[0;38;2;127;000;255m' # darkest
 
 # Gradient purple in reverse
@@ -373,18 +389,22 @@ clear_scr() {
 # ╭───────────────────────────────╮
 # │     Arguments && Defaults     │
 # ╰───────────────────────────────╯
+
+declare -a extensions
+
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help) print_help && exit 0 ;;
         -v|--version) show_version && exit 0 ;;
         -f|--find) ;;
-        -e|--ext) shift && extension="${1}";;
+        -e|--ext) shift && extensions+=("${1}");;
         -s|--stdin)  ;;
         -p|--preview) shift && img_protocol="${1}";;
         *)  [ -d "$1" ] && dir="$1" ;;
     esac
     shift
 done
+notify-send "ok: ${extensions[*]}"
 
 redraw() {
     get_term_size
