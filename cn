@@ -442,10 +442,18 @@ case "$TERM" in
     *) img_protocol="chafa" ;;
 esac
 
-
 # ╭───────────────────────────────╮
 # │      UI Commands              │
 # ╰───────────────────────────────╯
+
+show_cmd_menu() {
+    # Toggle menu
+    if [[ "$show_menu" -eq 0 ]]; then
+        show_pre=1
+    else
+        show_pre=0
+    fi
+}
 
 search() {
     tput cup "$((LINES / 2 + LINES / 4))" 0
@@ -467,6 +475,7 @@ find_images() {
         mapfile -d '' array < <(find "$dir" -print0 -type f \( -iname \*.jpg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \))
         ;;
         bash) 
+        # I gotta figure out how to make them path safe quickly
         # mapfile -d '' array < <(bash -c "cd ~/Pictures && shopt -s globstar dotglob; stat --format \"~/Pictures/%n\" -- **/*.{jpg,png,gif} | sort -rn")
         # mapfile array < <(bash -c "cd \"$dir\" && shopt -s globstar dotglob; printf '${dir}/%s\n' -- **/*.{jpg,png,gif} ")
         # mapfile array < <(bash -c "cd \"$dir\" && shopt -s globstar dotglob; dx=$(printf "${dir}/%s\n" -- **/*.{jpg,png,gif} | tr -d' ' '')")
