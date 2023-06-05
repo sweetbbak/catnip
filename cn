@@ -323,6 +323,7 @@ show_image() {
     fi
 
     image="${array[$i]}"
+    # image="$(realpath -- "$image")"
     image="${image// /\ }"
 
     # tput cup 1 1 ; tput ech "$((${#image}+9))"
@@ -362,10 +363,10 @@ set_bg() {
     wallpaper="$wallpaper"
     [ -z "$wallpaper" ] && wallpaper="$1"
     case "$wallpaper" in
-        swww) swww img "$image";;
-        feh)feh --bg-fill ---fehbg "$image";;
-        nitrogen)nitrogen "$image";;
-        hyprpaper)hyprpaper "$image";;
+        swww) swww img "$image" --transition-type center;;
+        feh) feh --bg-fill --no-fehbg "$image";;
+        nitrogen) nitrogen "$image";;
+        hyprpaper) hyprpaper "$image";;
         *) $wallpaper "$image";;
     esac
 }
@@ -391,12 +392,13 @@ clear_scr() {
 # ╰───────────────────────────────╯
 
 declare -a extensions
+declare findcmd
 
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help) print_help && exit 0 ;;
         -v|--version) show_version && exit 0 ;;
-        -f|--find) ;;
+        -f|--find) shift && findcmd="${1}" ;;
         -e|--ext) shift && extensions+=("${1}");;
         -s|--stdin)  ;;
         -p|--preview) shift && img_protocol="${1}";;
@@ -404,7 +406,7 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-notify-send "ok: ${extensions[*]}"
+# notify-send "ok: ${extensions[*]}"
 
 redraw() {
     get_term_size
@@ -423,12 +425,15 @@ trap redraw WINCH
 trap cleanup EXIT INT SIGINT
 
 # what find command to use
-if dependency_check fd; then 
-    findcmd="fd"
-elif dependency_check find; then
-    findcmd="find"
-else
-    findcmd="bash"
+if [ -z "$findcmd" ]; then
+    if dependency_check fd; then 
+        findcmd="fd"
+    elif dependency_check find; then
+        findcmd="find"
+    else
+        findcmd="bash"
+    fi
+    
 fi
 
 # need a more comprehensive terminal check for img protocol
@@ -437,17 +442,6 @@ case "$TERM" in
     *) img_protocol="chafa" ;;
 esac
 
-dir="${dir:-$HOME/Pictures}"
-declare -a array=()
-
-if [ -t 0 ]; then
-    echo "Pipe not open" 2>/dev/null
-    mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
-else
-    # else pipe is open
-    mapfile -t array < <(cat -)
-    exec 0<&-
-fi
 
 # ╭───────────────────────────────╮
 # │      UI Commands              │
@@ -470,10 +464,13 @@ find_images() {
         mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
         ;;
         find) 
-        mapfile array < <(find "$dir" -type f \( -iname \*.jpg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \))
+        mapfile -d '' array < <(find "$dir" -print0 -type f \( -iname \*.jpg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \))
         ;;
         bash) 
-        mapfile array < <(bash -c "cd ~/Pictures && shopt -s globstar dotglob; stat --format \"~/Pictures/%n\" -- **/*.{jpg,png,gif} | sort -rn")
+        # mapfile -d '' array < <(bash -c "cd ~/Pictures && shopt -s globstar dotglob; stat --format \"~/Pictures/%n\" -- **/*.{jpg,png,gif} | sort -rn")
+        # mapfile array < <(bash -c "cd \"$dir\" && shopt -s globstar dotglob; printf '${dir}/%s\n' -- **/*.{jpg,png,gif} ")
+        # mapfile array < <(bash -c "cd \"$dir\" && shopt -s globstar dotglob; dx=$(printf "${dir}/%s\n" -- **/*.{jpg,png,gif} | tr -d' ' '')")
+        mapfile -d '' array < <(find "$dir" -print0 -type f \( -iname \*.jpg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \))
         ;;
     esac
     redraw
@@ -509,15 +506,29 @@ cmdd() {
     esac
 }
 
+dir="${dir:-$HOME/Pictures}"
+declare -a array=()
+
+if [ -t 0 ]; then
+    # mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+    find_images "${findcmd:-find}"
+else
+    # else pipe is open
+    mapfile -t array < <(cat -)
+    exec 0<&-
+fi
+
 # ╭───────────────────────────────╮
 # │      Intitialize Program      │
 # ╰───────────────────────────────╯
 
 show_pre=1
+show_menu=0
 # cmd_mode=0
 
 x=0
-size=40
+# size=0
+size=$((LINES))
 lx=2
 ly=2
 
@@ -549,7 +560,7 @@ while true; do
         i|:|\;) cmdd ;; # insert
 
         p) show_preview ;; # toggle preview on/off
-        F) swww img "$image" ;; # set as background
+        F) swww img "$image" --transition-type center;; # set as background
         o) swayimg "$image" ;; # open externally
         c) clear_scr && show_image ;;
         x) clean_image && wl-copy "$image" ;;
