@@ -28,6 +28,8 @@ print_help() {
     echo -e '    \e[3m-e, --ext\e[23m
             Extensions types to search the given directory for
             example cn -e png -e webp -e gif [options] <directory>'
+    echo -e '    \e[3m-w, --wall\e[23m
+            Command to set wallpaper'
     echo -e '    \e[3m-s, --stdin\e[23m
             (Not Implemented, opt for auto-detect) Read from stdin'
     echo -e '    \e[3m-p, --preview\e[23m
@@ -47,7 +49,7 @@ cleanup() {
 
 dependency_check() {
     for x in "$@"; do
-        if ! command -v "$x" &> /dev/null; then
+        if ! command -v "$x" > /dev/null; then
             return 1
         else
             return 0
@@ -401,6 +403,7 @@ while [ $# -gt 0 ]; do
         -f|--find) shift && findcmd="${1}" ;;
         -e|--ext) shift && extensions+=("${1}");;
         -s|--stdin)  ;;
+        -w|--wall)  shift && wallpaper="${1}" ;;
         -p|--preview) shift && img_protocol="${1}";;
         *)  [ -d "$1" ] && dir="$1" ;;
     esac
