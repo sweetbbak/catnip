@@ -577,7 +577,7 @@ while true; do
         c) clear_scr && show_image ;;
         x) clean_image && wl-copy "$image" ;;
 
-        $'\n'|$'\x0a') printf "%s\n" "${image}" 2>&1 /dev/{stdout,stderr,tty} && exit 0;;
+        $'\n'|$'\x0a') printf "%s\n" "${image}" >&2 /dev/{stdout,stderr,tty} && exit 0;;
         q) exit 0 ;;
     esac
 done
