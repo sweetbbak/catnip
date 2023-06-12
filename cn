@@ -4,11 +4,11 @@
 
 # declare array -a -- -A is associative array
 # dumb name for an array of images
-declare -a array
+# declare -a array
 
 # 0 is Off 1 is On
 show_menu=0
-trap - SIGPIPE
+# trap - SIGPIPE
 
 # Show help menu
 print_help() {
@@ -392,23 +392,24 @@ clear_scr() {
 # ╭───────────────────────────────╮
 # │     Arguments && Defaults     │
 # ╰───────────────────────────────╯
+# --this is the first part shit starts happening at--
 
-declare -a extensions
-declare findcmd
+# declare -a extensions
+# declare findcmd
 
-while [ $# -gt 0 ]; do
-    case "$1" in
-        -h|--help) print_help && exit 0 ;;
-        -v|--version) show_version && exit 0 ;;
-        -f|--find) shift && findcmd="${1}" ;;
-        -e|--ext) shift && extensions+=("${1}");;
-        -s|--stdin)  ;;
-        -w|--wall)  shift && wallpaper="${1}" ;;
-        -p|--preview) shift && img_protocol="${1}";;
-        *)  [ -d "$1" ] && dir="$1" ;;
-    esac
-    shift
-done
+# while [ $# -gt 0 ]; do
+#     case "$1" in
+#         -h|--help) print_help && exit 0 ;;
+#         -v|--version) show_version && exit 0 ;;
+#         -f|--find) shift && findcmd="${1}" ;;
+#         -e|--ext) shift && extensions+=("${1}");;
+#         -s|--stdin)  ;;
+#         -w|--wall)  shift && wallpaper="${1}" ;;
+#         -p|--preview) shift && img_protocol="${1}";;
+#         *)  [ -d "$1" ] && dir="$1" ;;
+#     esac
+#     shift
+# done
 # notify-send "ok: ${extensions[*]}"
 
 redraw() {
@@ -428,18 +429,19 @@ trap redraw WINCH
 trap cleanup EXIT INT SIGINT
 
 # what find command to use
-if [ -z "$findcmd" ]; then
-    if dependency_check fd; then 
-        findcmd="fd"
-    elif dependency_check find; then
-        findcmd="find"
-    else
-        findcmd="bash"
-    fi
+# if [ -z "$findcmd" ]; then
+#     if dependency_check fd; then 
+#         findcmd="fd"
+#     elif dependency_check find; then
+#         findcmd="find"
+#     else
+#         findcmd="bash"
+#     fi
     
-fi
+# fi
 
 # need a more comprehensive terminal check for img protocol
+# TODO add swayimg, uberzeug/Uberzeugpp as an option
 case "$TERM" in
     *kitty*) img_protocol="kitty" ;;
     *) img_protocol="chafa" ;;
@@ -469,7 +471,10 @@ search() {
 }
 
 find_images() {
-    unset array
+    # unset array
+    # unset dir
+    # declare dir
+    dir="${1}"
     case "$findcmd" in 
         fd)  
         mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
@@ -483,6 +488,7 @@ find_images() {
         # mapfile array < <(bash -c "cd \"$dir\" && shopt -s globstar dotglob; printf '${dir}/%s\n' -- **/*.{jpg,png,gif} ")
         # mapfile array < <(bash -c "cd \"$dir\" && shopt -s globstar dotglob; dx=$(printf "${dir}/%s\n" -- **/*.{jpg,png,gif} | tr -d' ' '')")
         mapfile -d '' array < <(find "$dir" -print0 -type f \( -iname \*.jpg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \))
+        # array=$(cd "${dir}" && echo **/*.{jpg,png,gif} )
         ;;
     esac
     redraw
@@ -494,6 +500,7 @@ pick-dir() {
     tput cup "$((LINES / 2 + LINES / 4))" 0
     dirpick=$(fd . "$directory" -td --absolute-path | fzf --cycle --reverse --height=5% \
         --bind 'enter:execute(printf {} 2> /dev/stdout)+abort')
+    unset "${array[@]}"
     find_images "$dirpick"
     show_image
     redraw
@@ -505,9 +512,11 @@ read_cmd() {
 }
 
 cmdd() {
+    # jump to the command line zone
     tput cup "$((LINES - 2 ))" 2 ; tput cnorm ; stty echo
     read -ren 33 keys
     tput civis ; stty -echo ; tput cup "$((LINES - 2 ))" 2 ; tput ech 33
+    # TODO add a way to add custom functions or interface with the shell directly
     case "$keys" in
         search) search ;;
         fzf) search ;;
@@ -518,17 +527,57 @@ cmdd() {
     esac
 }
 
-dir="${dir:-$HOME/Pictures}"
 declare -a array=()
+declare -a extensions
+declare findcmd
 
 if [ -t 0 ]; then
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) print_help && exit 0 ;;
+        -v|--version) show_version && exit 0 ;;
+        -f|--find) shift && findcmd="${1}" ;;
+        -e|--ext) shift && extensions+=("${1}");;
+        -s|--stdin)  ;;
+        -w|--wall)  shift && wallpaper="${1}" ;;
+        -p|--preview) shift && img_protocol="${1}";;
+        *)  [ -d "$1" ] && dir="$1" ;;
+    esac
+    shift
+done
+
+if [ -z "$findcmd" ]; then
+    if dependency_check fd; then 
+        findcmd="fd"
+    elif dependency_check find; then
+        findcmd="find"
+    else
+        findcmd="bash"
+    fi
+    
+fi
+
+if [ -z "${extensions[@]}" ]; then 
+        extensions=(-e png -e jpg -e gif -e webp)
+    else
+        extensions=("${extensions[@]/#/-e }")
+fi
+printf "%s " "${extensions[*]}"
+# sleep 10
+dir="${dir:-$HOME/Pictures}"
+
+# if stdin isnt open find images "${array[@]/#/prefix_}"
     # mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
-    find_images "${findcmd:-find}"
+    # mapfile -d '' array < <(fd . "$dir" -0 -tf "${extensions[@]/#/-e }")
+    mapfile -d '' array < <(fd . "$dir" -0 -tf "${extensions[@]}")
+    # find_images "$dir"
 else
     # else pipe is open
-    mapfile -t array < <(cat -)
+    mapfile array < <(cat -)
     exec 0<&-
 fi
+
 
 # ╭───────────────────────────────╮
 # │      Intitialize Program      │
@@ -540,19 +589,23 @@ show_menu=0
 
 x=0
 # size=0
-size=$((LINES))
+get_term_size
+size=$((LINES + 20))
 lx=2
 ly=2
 
-get_term_size
-garbled_load_text
+# garbled_load_text
 draw_box
 
 while true; do
 
+    # sleep to avoid reading keys too fast
+    # read -r -s -N1 key < /dev/stdin 2> /dev/null
+    read -r -s -N1 key < /dev/tty 2> /dev/null
     sleep .01
-    read -r -s -N1 key < /dev/stdin 2> /dev/null
+    # read -r -s -N1 key
 
+    # init and re-init the amount of images in the array // +our counter string
     array_count="${#array[@]}"
     count="(${i}/${array_count})"
 
@@ -572,13 +625,12 @@ while true; do
         i|:|\;) cmdd ;; # insert
 
         p) show_preview ;; # toggle preview on/off
-        F) swww img "$image" --transition-type center;; # set as background
+        f|F) swww img "$image" --transition-type center;; # set as background
         o) swayimg "$image" ;; # open externally
         c) clear_scr && show_image ;;
         x) clean_image && wl-copy "$image" ;;
 
-        $'\n'|$'\x0a') printf "%s\n" "${image}" >&2 /dev/{stdout,stderr,tty} && exit 0;;
+        $'\n'|$'\x0a') printf "%s\n" "${image}" > /dev/tty && exit 0;;
         q) exit 0 ;;
     esac
 done
- 
