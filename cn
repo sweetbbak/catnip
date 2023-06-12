@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-
 # declare array -a -- -A is associative array
 # dumb name for an array of images
 # declare -a array
