@@ -1,10 +1,15 @@
 #!/bin/bash
+# Version 0.3.0
+# Sweetbbak
+# ╭───────────────────────────────╮
+# │         Catnip                │
+# ╰───────────────────────────────╯
 
+# set -x
+# source user configuration
 # SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-# declare array -a -- -A is associative array
-# dumb name for an array of images
-# declare -a array
 
+# declare -a array
 # 0 is Off 1 is On
 show_menu=0
 # trap - SIGPIPE
@@ -203,10 +208,11 @@ gradient() {
 
 garbled_load_text() {
     LC_ALL=C
+    get_term_size
     clear
     local strlen
-    # strlen=100
     strlen=$COLUMNS
+    # strlen=100
 
     yyy="$((COLUMNS / 2 - $((strlen / 2))))"
     xxx="$((LINES / 2))"
@@ -214,6 +220,8 @@ garbled_load_text() {
     for ((p=0;p<20;p++)); do
         tput el
         string=$(tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c "$strlen" ; echo)
+        # string=$(tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c "$((COLUMNS * LINES))" ; echo)
+        # gradient "$string"
 
         tput cup "$xxx" "$yyy"
         gradient "$string"
@@ -223,6 +231,7 @@ garbled_load_text() {
 
         tput cup "$((xxx+2))" "$yyy"
         gradient "Loading ... Catnip"
+        cat_logo
 
         tput cup "$((xxx+3))" "$yyy"
         gradient "$string"
@@ -233,6 +242,19 @@ garbled_load_text() {
     done
     # gradient "Press J or K"
     tput clear
+}
+
+cat_logo() {
+    gradient '
+                      █       
+           ▐▌         ▀       
+ ▟██▖ ▟██▖▐███ ▐▙██▖ ██  ▐▙█▙ 
+▐▛  ▘ ▘▄▟▌ ▐▌  ▐▛ ▐▌  █  ▐▛ ▜▌
+▐▌   ▗█▀▜▌ ▐▌  ▐▌ ▐▌  █  ▐▌ ▐▌
+▝█▄▄▌▐▙▄█▌ ▐▙▄ ▐▌ ▐▌▗▄█▄▖▐█▄█▘
+ ▝▀▀  ▀▀▝▘  ▀▀ ▝▘ ▝▘▝▀▀▀▘▐▌▀▘ 
+                         ▐▌   
+'
 }
 
 bash_finder() {
@@ -260,8 +282,7 @@ assign () { local var=$1; shift; "$@" > /tmp/myfifo; read -r "${var?}" < /tmp/my
 
 draw_box() {
     tput clear
-    get_term_size
-
+    # get_term_size
     horiz="$((COLUMNS - 1))"
     # vert="$((LINES - 2 ))"
     vert="$LINES"
@@ -557,7 +578,7 @@ if [ -z "$findcmd" ]; then
     
 fi
 
-if [ -z "${extensions[@]}" ]; then 
+if [ -z "${extensions[*]}" ]; then 
         extensions=(-e png -e jpg -e gif -e webp)
     else
         extensions=("${extensions[@]/#/-e }")
@@ -569,8 +590,8 @@ dir="${dir:-$HOME/Pictures}"
 # if stdin isnt open find images "${array[@]/#/prefix_}"
     # mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
     # mapfile -d '' array < <(fd . "$dir" -0 -tf "${extensions[@]/#/-e }")
-    mapfile -d '' array < <(fd . "$dir" -0 -tf "${extensions[@]}")
-    # find_images "$dir"
+    # mapfile -d '' array < <(fd . "$dir" -0 -tf "${extensions[@]}")
+    find_images "$dir"
 else
     # else pipe is open
     mapfile array < <(cat -)
@@ -593,8 +614,10 @@ size=$((LINES + 20))
 lx=2
 ly=2
 
-# garbled_load_text
+garbled_load_text
+# tput cup $((LINES / 2)) $((COLUMNS / 2)) && cat_logo && sleep .5
 draw_box
+# sleep 10
 
 while true; do
 

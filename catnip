@@ -1,0 +1,77 @@
+#!/bin/bash
+# testing version for catnip
+
+# Cursor to absolute position
+cup() { printf '\e[%s;%sH' "$1" "$2" ; }
+# Cursor 0, 0
+cup_home() { printf '\e[H' ; }
+# Move cursor N lines <direction>
+cup_up() { printf '\e[%sA' "$1" ; }
+cup_down() { printf '\e[%sB' "$1" ; }
+cup_right() { printf '\e[%sC' "$1" ; }
+cup_left() { printf '\e[%sD' "$1" ; }
+# Save and reset cursor position
+cup_save() { printf '\e[s' ; }
+cup_restore() { printf '\e[u' ; }
+# Erase from cursor to end of line
+cup_x_eol() { printf '\e[K'; }
+# Erase from cursor to start of line
+cup_x_sol() { printf '\e[1K'; }
+# erase entire line
+cup_x_dl() { printf '\e[2K'; }
+# erase current line to bottom screen
+cup_clear_to_bottom() { printf '\e[J' ; }
+# erase current line to top screen
+cup_clear_to_top() { printf '\e[1J'; }
+# clear screen
+cup_x_clear() { printf '\e[2J'; }
+# clear screen and move to Home
+cup_screen_home() { printf '\e[2J\e[H'; }
+ 
+# an ansi code color gradient from light blue to purple
+blu_gradient=(
+    '\e[0;38;2;127;191;255m'
+    '\e[0;38;2;127;127;255m'
+    '\e[0;38;2;127;063;255m'
+    '\e[0;38;2;127;000;255m'
+    '\e[0;38;2;127;000;255m'
+    '\e[0;38;2;127;063;255m'
+    '\e[0;38;2;127;127;255m'
+    '\e[0;38;2;127;191;255m'
+)
+
+# function that takes a string as input and prints a colored gradient version
+gradient() {
+    str="${*}"
+    # string=aaaaa ; ${string:0:5} var:index:length - starts at 0 indexing
+    array_index=0
+    color_index=0
+    str_len="${#str}"
+    # length to cut string into and change colors
+    length="$((str_len / 8))"
+
+    # color index loops in $length so if length=3 than its 0, 3, 6, 9 etc.. until string is ate up
+    while [[ $color_index -le $str_len ]]; do
+        printf '%b' "${blu_gradient[$array_index]}${str:$color_index:$length}"
+        color_index="$((color_index + length))"
+        array_index="$((array_index + 1))"
+    done
+    # needs a newline otherwise it leaves a % sign
+    printf "%s\n" ""
+}
+
+
+cat_logo() {
+    gradient '
+                                  █       
+                       ▐▌         ▀       
+             ▟██▖ ▟██▖▐███ ▐▙██▖ ██  ▐▙█▙ 
+            ▐▛  ▘ ▘▄▟▌ ▐▌  ▐▛ ▐▌  █  ▐▛ ▜▌
+            ▐▌   ▗█▀▜▌ ▐▌  ▐▌ ▐▌  █  ▐▌ ▐▌
+            ▝█▄▄▌▐▙▄█▌ ▐▙▄ ▐▌ ▐▌▗▄█▄▖▐█▄█▘
+             ▝▀▀  ▀▀▝▘  ▀▀ ▝▘ ▝▘▝▀▀▀▘▐▌▀▘ 
+                                     ▐▌   
+'
+}
+
+tput cup 10 10 && cat_logo
