@@ -29,7 +29,7 @@ cup_x_clear() { printf '\e[2J'; }
 cup_screen_home() { printf '\e[2J\e[H'; }
  
 # an ansi code color gradient from light blue to purple
-blu_gradient=(
+bgg=(
     '\e[0;38;2;127;191;255m'
     '\e[0;38;2;127;127;255m'
     '\e[0;38;2;127;063;255m'
@@ -52,7 +52,7 @@ gradient() {
 
     # color index loops in $length so if length=3 than its 0, 3, 6, 9 etc.. until string is ate up
     while [[ $color_index -le $str_len ]]; do
-        printf '%b' "${blu_gradient[$array_index]}${str:$color_index:$length}"
+        printf '%b' "${bgg[$array_index]}${str:$color_index:$length}"
         color_index="$((color_index + length))"
         array_index="$((array_index + 1))"
     done
@@ -60,18 +60,112 @@ gradient() {
     printf "%s\n" ""
 }
 
-
 cat_logo() {
-    gradient '
-                                  █       
-                       ▐▌         ▀       
-             ▟██▖ ▟██▖▐███ ▐▙██▖ ██  ▐▙█▙ 
-            ▐▛  ▘ ▘▄▟▌ ▐▌  ▐▛ ▐▌  █  ▐▛ ▜▌
-            ▐▌   ▗█▀▜▌ ▐▌  ▐▌ ▐▌  █  ▐▌ ▐▌
-            ▝█▄▄▌▐▙▄█▌ ▐▙▄ ▐▌ ▐▌▗▄█▄▖▐█▄█▘
-             ▝▀▀  ▀▀▝▘  ▀▀ ▝▘ ▝▘▝▀▀▀▘▐▌▀▘ 
-                                     ▐▌   
-'
+    clear
+    echo -e "\n"
+    echo -e "${bgg[0]}                           █       "
+    echo -e "${bgg[1]}                ▐▌         ▀       "
+    echo -e "${bgg[2]}      ▟██▖ ▟██▖▐███ ▐▙██▖ ██  ▐▙█▙ "
+    echo -e "${bgg[3]}     ▐▛  ▘ ▘▄▟▌ ▐▌  ▐▛ ▐▌  █  ▐▛ ▜▌"
+    echo -e "${bgg[4]}     ▐▌   ▗█▀▜▌ ▐▌  ▐▌ ▐▌  █  ▐▌ ▐▌"
+    echo -e "${bgg[5]}     ▝█▄▄▌▐▙▄█▌ ▐▙▄ ▐▌ ▐▌▗▄█▄▖▐█▄█▘"
+    echo -e "${bgg[6]}      ▝▀▀  ▀▀▝▘  ▀▀ ▝▘ ▝▘▝▀▀▀▘▐▌▀▘ "
+    echo -e "${bgg[7]}                              ▐▌   "
+    echo -e "\n"
 }
 
-tput cup 10 10 && cat_logo
+show_image() {
+    if (( i < 0 )); then
+        # i=array_count
+        i="${#array[@]}"
+    fi
+
+    if (( i >= array_count )); then
+        i=0
+    fi
+
+    image="${array[$i]}"
+    # image="$(realpath -- "$image")"
+    image="${image// /\ }"
+
+    # tput cup 1 1 ; tput ech "$((${#image}+9))"
+    tput cup 1 1 ; tput ech "$((COLUMNS - 3))"
+    gradient "${count} <=> ${image}"
+
+    if [[ "$show_pre" -eq 1 ]]; then
+            kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
+    fi
+}
+
+
+close_stdout() {
+    exec >&-
+}
+
+restore_stdout(){
+    exec 1>&6 6>&-
+}
+
+cat_logo
+
+# PROG=${0##*/}
+
+main(){
+    cat_logo
+
+    show_pre=1
+    array_count="${#array[@]}"
+    count="(${i}/${array_count})"
+    i=0
+    size=$((LINES + 20))
+    lx=2
+    ly=2
+
+    while true; do
+        read -r -s -N1 key </dev/tty 2>/dev/null
+        case "$key" in
+            # q) exec 1>&6 6>&1 ; break ;;
+            j|$'\x1b\x5b\x41') i=$((i-1)) ; show_image ;;
+            k|$'\x1b\x5b\x42') i=$((i+1)) ; show_image ;;
+            J) i=$((i-5)) ; show_image ;;
+            K) i=$((i+5)) ; show_image  ;;
+
+            h) lx=$((lx-5)) ; show_image ;;
+            l) lx=$((lx+5)) ; show_image ;;
+
+            m) size=$((size+5)) ; show_image ;;
+            n) size=$((size-5)) ; show_image ;;
+            # $' '|$'\x20') show_menu=1 ;; # space key
+            # $'\x1b') echo Escape Key ;; # escape key
+            # i|:|\;) cmdd ;; # insert
+
+            p) show_preview ;; # toggle preview on/off
+            # f|F) swww img "$image" --transition-type center;; # set as background
+            # o) swayimg "$image" ;; # open externally
+            c) clear_scr && show_image ;;
+            x) clean_image && wl-copy "$image" ;;
+
+            $'\n'|$'\x0a') printf "%s\n" "${image}" >/dev/stdout && kitty +kitten icat --clear && break;;
+            q) exit 0 ;;
+        esac
+    done
+}
+
+if [ -p /dev/stdin ]; then
+    exec 6<&0
+    readarray -d '' array <&6
+    exec 0<&6 6<&-
+else
+    readarray -d '' array < <(fd . ~/ssd/gallery-dl -0 -tf -e png -e jpg -e webp)
+fi
+
+if [ -p /dev/stdout ]; then
+    # link file descriptor #6 to stdout
+    exec 6>&1
+
+    "$0" < /dev/tty > /dev/tty 2>&1
+    main
+    exec 1>&6 6>&-
+else
+    main
+fi

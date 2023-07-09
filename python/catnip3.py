@@ -61,30 +61,34 @@ class Header:
         grid = Table.grid(expand=True)
         grid.add_column(justify="center", ratio=1)
         grid.add_column(justify="right")
-        grid.add_row("[b]Test[/b] Application")
-        return Panel(grid, style="white")
+        grid.add_row("[b]Catnip[/b]")
+        return Panel(grid, style="blue")
 
 
 def update_pan(layout, image):
     layout["main"].update(
-        Panel(f"[bold blue]{image}", border_style="green", title_align="right")
+        Panel(f"[bold blue]{image}", border_style="blue", title_align="right")
     )
     layout["command"].update(
         Panel(
             f"[bold blue]{image}",
-            border_style="white",
+            border_style="blue",
         )
     )
 
 
 def get_input(layout):
-    console = Console()
-    command = console.input("> ")
-    type = []
-    while True:
-        val = term.inkey()
-        command = type.append(val)
-        layout["command2"].update(Panel(f"[bold green]{command}"))
+    # console = Console()
+    # command = console.input("> ")
+    # inp = input()
+    os.system("stty echo")
+    layout["command2"].update(Panel(f"[bold green]{input()}"))
+    # type = []
+    # val = term.inkey()
+    # while val != "KEY_ENTER":
+    # val = term.inkey()
+    # type.append(val)
+    # layout["command2"].update(Panel(f"[bold green]{type1}"))
 
 
 def main():
@@ -93,8 +97,9 @@ def main():
 
     layout = make_layout()
     layout["Title"].update(Header())
-    layout["main"].update(Panel("[bold blue]:3", border_style="green"))
-    layout["command"].update(Panel(f"[bold blue]{images[0]}", border_style="white"))
+    layout["main"].update(Panel("[bold blue]:3", border_style="blue"))
+    layout["command"].update(Panel(f"[bold blue]{images[0]}", border_style="blue"))
+    layout["command2"].update(Panel("[bold blue]cmd", border_style="blue"))
 
     with term.cbreak(), term.hidden_cursor():
         val = ""
@@ -129,6 +134,7 @@ def main():
                 if val == "F":
                     os.system(f"feh --bg-fill {images[i]}")
                 if val == "/":
+                    # os.system("printf '\e[30;0H' ")
                     get_input(layout)
 
                 refresh(images[i], x, y, w)
