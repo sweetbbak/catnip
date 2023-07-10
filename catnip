@@ -1,5 +1,6 @@
 #!/bin/bash
 # testing version for catnip
+# set -x
 
 # Cursor to absolute position
 cup() { printf '\e[%s;%sH' "$1" "$2" ; }
@@ -86,15 +87,26 @@ show_image() {
 
     image="${array[$i]}"
     # image="$(realpath -- "$image")"
-    image="${image// /\ }"
+    # image="${image// /\ }"
+    # image="${image//\x0/}"
+    image=$(realpath -- "${image}")
+    image="$(echo "${image}" | tr -d '\n' | tr -d '\n\r' | tr -d '\012'  | sed -e 's/\n//g' -e 's/\0//g' | tr -dc "[:print:]" )"
+    # image="$(printf "%q" "$image")"
+    image="$(echo "${image}" | tr -d '\x0')"
+    # image="'${image}'"
 
     # tput cup 1 1 ; tput ech "$((${#image}+9))"
     tput cup 1 1 ; tput ech "$((COLUMNS - 3))"
-    gradient "${count} <=> ${image}"
+    clear
+    # gradient "${count} <=> ${image}"
+    echo "$image"
+    tput cup 2 1 ; echo "${image}" | od -c 
 
-    if [[ "$show_pre" -eq 1 ]]; then
-            kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
-    fi
+    # if [[ "$show_pre" -eq 1 ]]; then
+    kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
+            # kitty +kitten icat --clear --scale-up "$image"
+            # chafa -f kitty "${size}x${size}@${lx}x${ly}" "${image}"
+    # fi
 }
 
 
@@ -153,8 +165,22 @@ main(){
 
 if [ -p /dev/stdin ]; then
     exec 6<&0
-    readarray -d '' array <&6
+    # readarray -d '' array1 <&6
+    readarray array1 <&6
     exec 0<&6 6<&-
+
+    declare -a array
+    for xyz in "${array1[@]}"; do
+        # cleaned=$(echo "$xyz" | tr -dc '[:print:]' | sed 's/\0//g')
+        cleaned=$(printf "%s\n" "$xyz" | tr -dc '[:print:]' | tr -d '\n')
+        echo "$cleaned"
+        # echo "$cleaned"|od -c
+        # sleep 1
+        # array+=( \'"${cleaned}"\' )
+        array+=( "${cleaned}" )
+    done
+        # echo \'"${array[*]}"\'
+        # sleep 10
 else
     readarray -d '' array < <(fd . ~/ssd/gallery-dl -0 -tf -e png -e jpg -e webp)
 fi
