@@ -3,11 +3,32 @@
 # suppress output / hide cursor
 stty -echo
 tput civis
+tput smcup
+
+show_version () {
+cat << EOF
+"${0##*/}" version 0.3.0
+EOF
+}
 
 cleanup() {
     clear
     tput cnorm
+    tput rmcup
     stty echo
+}
+
+unhide_cursor() {
+    printf '\e[?25h'
+}
+
+hide_curs() {
+    tput civis
+    stty -echo
+}
+
+get_term_size() {
+    read -r LINES COLUMNS < <(stty size)
 }
 
 # thanks dylan araps
@@ -17,16 +38,243 @@ trim_string() {
     : "${_%"${_##*[![:space:]]}"}"
     printf '%s\n' "$_"
 }
- 
+
+blu_gradient=(
+    '\e[0;38;2;127;191;255m'
+    '\e[0;38;2;127;127;255m'
+    '\e[0;38;2;127;063;255m'
+    '\e[0;38;2;127;000;255m'
+    '\e[0;38;2;127;000;255m'
+    '\e[0;38;2;127;063;255m'
+    '\e[0;38;2;127;127;255m'
+    '\e[0;38;2;127;191;255m'
+)
+
+gradient() {
+    str="${*}"
+    # string=aaaaa ; ${string:0:5} var:index:length - starts at 0 indexing
+    array_index=0
+    color_index=0
+    str_len="${#str}"
+    # length to cut string into and change colors
+    length="$((str_len / 8))"
+
+    # color index loops in $length so if length=3 than its 0, 3, 6, 9 etc.. until string is ate up
+    while [[ $color_index -le $str_len ]]; do
+        printf '%b' "${blu_gradient[$array_index]}${str:$color_index:$length}"
+        color_index="$((color_index + length))"
+        array_index="$((array_index + 1))"
+    done
+    # needs a newline otherwise it leaves a % sign
+    printf "%s\n" ""
+}
+
+# Cursor to absolute position
+cup() { printf '\e[%s;%sH' "$1" "$2" ; }
+# Cursor 0, 0
+cup_home() { printf '\e[H' ; }
+# Move cursor N lines <direction>
+cup_up() { printf '\e[%sA' "$1" ; }
+cup_down() { printf '\e[%sB' "$1" ; }
+cup_right() { printf '\e[%sC' "$1" ; }
+cup_left() { printf '\e[%sD' "$1" ; }
+# Save and reset cursor position
+cup_save() { printf '\e[s' ; }
+cup_restore() { printf '\e[u' ; }
+# Erase from cursor to end of line
+cup_x_eol() { printf '\e[K'; }
+# Erase from cursor to start of line
+cup_x_sol() { printf '\e[1K'; }
+# erase entire line
+cup_x_dl() { printf '\e[2K'; }
+# erase current line to bottom screen
+cup_clear_to_bottom() { printf '\e[J' ; }
+# erase current line to top screen
+cup_clear_to_top() { printf '\e[1J'; }
+# clear screen
+cup_x_clear() { printf '\e[2J'; }
+# clear screen and move to Home
+cup_screen_home() { printf '\e[2J\e[H'; }
+
+draw_box() {
+    tput clear
+    # get_term_size
+    horiz="$((COLUMNS - 1))"
+    vert="$LINES"
+    itera=1
+
+    # put corner left & right top
+    # and then top line
+    cup_home && cup_x_eol && printf '╭'
+    perl -E "print '─' x $horiz"
+    cup_right 1 && printf '╮'
+
+    # input vertical lines on both sides
+    for ((itera=1; itera<vert; itera++)); do
+        tput cup "$itera" 0 && printf "│"
+        tput cup "$itera" "$horiz" && printf "│"
+    done
+
+    # put left & right bottom corner
+    # and then top line
+    cup "$vert" 0 && cup_x_eol && printf '╰'
+    perl -E "print '─' x $horiz"
+    cup_right 1 && printf '╯'
+
+    # put left & right bottom middle delim
+    # and then mid-line
+    cup "$((vert - 2))" 0 && cup_x_eol && printf '├'
+    perl -E "print '─' x $horiz"
+    cup_right 1 && printf '┤'
+}
+
+clean_image() {
+    image="${array[$i]}"
+    image="${image// /\ }"
+}
+
+find_images() {
+    dir="${1}"
+    case "$findcmd" in 
+        fd)  
+        mapfile -d '' array < <(fd . "$dir" -0 -tf -e png -e jpg -e gif -e svg -e jpeg)
+        ;;
+        find) 
+        mapfile -d '' array < <(find "$dir" -print0 -type f \( -iname \*.jpg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \))
+        ;;
+        bash) 
+        mapfile -d '' array < <(find "$dir" -print0 -type f \( -iname \*.jpg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \))
+        ;;
+    esac
+    redraw
+}
+
+show_preview() {
+    # Toggle Images on and off for speed
+    if [[ "$show_pre" -eq 0 ]]; then
+        show_pre=1
+    else
+        show_pre=0
+    fi
+}
+
+search() {
+    tput cup "$((LINES / 2 + LINES / 4))" 0
+    XX=$(printf "%s\n" "${array[@]}" | fzf --cycle --reverse --height=5% \
+        --bind 'enter:execute(printf {n} 2> /dev/stdout)+abort')
+    i="$XX"
+    image="${array[$i]}"
+    show_image
+    redraw
+}
+
+pick-dir() {
+    directory="${2:-$HOME}"
+
+    tput cup "$((LINES / 2 + LINES / 4))" 0
+    dirpick=$(fd . "$directory" -td --absolute-path | fzf --cycle --reverse --height=5% \
+        --bind 'enter:execute(printf {} 2> /dev/stdout)+abort')
+    unset "${array[@]}"
+    find_images "$dirpick"
+    show_image
+    redraw
+}
+
+read_cmd() {
+    cmd="$(printf "%s\n" "$@")"
+    notify-send "sh -c $cmd"
+}
+
+cmdd() {
+    # jump to the command line zone
+    tput cup "$((LINES - 2 ))" 2 ; tput cnorm ; stty echo
+    read -ren 33 keys
+    tput civis ; stty -echo ; tput cup "$((LINES - 2 ))" 2 ; tput ech 33
+    # TODO add a way to add custom functions or interface with the shell directly
+    case "$keys" in
+        search) search ;;
+        fzf) search ;;
+        cd*) pick-dir "$keys" ;;
+        set-bg) set_bg "$wallpaper" ;;
+        test) read_cmd "$keys" "$image" ;;
+        *) read_cmd "$keys" "$image" ;;
+    esac
+}
+
+
+show_image() {
+    if (( i < 0 )); then
+        # i=array_count
+        i="${#array[@]}"
+    fi
+
+    if (( i >= array_count )); then
+        i=0
+    fi
+
+    image="${array[$i]}"
+    # image="$(realpath -- "$image")"
+    image="${image// /\ }"
+
+    # tput cup 1 1 ; tput ech "$((${#image}+9))"
+    tput cup 1 1 ; tput ech "$((COLUMNS - 3))"
+    gradient "|${count} | ${image}"
+
+    if [[ "$show_pre" -eq 1 ]]; then
+        case "$img_protocol" in
+        kitty)
+            kitty +kitten icat --clear --scale-up --place "${size}x${size}@${lx}x${ly}" "${image}"
+            ;;
+        sixel|chafa)
+            # need a new menu system for chafa unfortunately cant clear properly and draw menu
+            tput cup 3 3 && clear && chafa -c full -f sixels -s "${size}x${size}" "${image}"
+            ;;
+        iterm)
+            tput cup 3 3 && chafa -c full -f iterm -s "${size}x${size}" "${image}"
+            ;;
+        ascii)
+            tput cup 3 3 && chafa -s "${size}x${size}" "${image}"
+            ;;
+        esac
+    fi
+}
+
+
+
 input_loop() {
     tput civis
     clear
     while true; do
+
+    # constantly poll array len
+    array_count="${#array[@]}"
+    # string for displaying in menu bar
+    count="(${i}/${array_count})"
+
         case "$key" in
-            j|$'\x1b\x5b\x41') if [ "$index" = 0 ]; then index=1 ; elif [ "$index" = 1 ]; then index=0 ; fi ;;
-            k|$'\x1b\x5b\x42') if [ "$index" = 0 ]; then index=1 ; elif [ "$index" = 1 ]; then index=0 ; fi ;;
-            $'\x0a') break ;;
-            *) echo >/dev/null ;;
+            j|$'\x1b\x5b\x41') i=$((i-1)) ; show_image ;;
+            k|$'\x1b\x5b\x42') i=$((i+1)) ; show_image ;;
+            J) i=$((i-5)) ; show_image ;;
+            K) i=$((i+5)) ; show_image  ;;
+
+            h) lx=$((lx-5)) ; show_image ;;
+            l) lx=$((lx+5)) ; show_image ;;
+
+            m) size=$((size+5)) ; show_image ;;
+            n) size=$((size-5)) ; show_image ;;
+            $' '|$'\x20') show_menu=1 ;; # space key
+            # $'\x1b') echo Escape Key ;; # escape key
+            i|:|\;) cmdd ;; # insert
+
+            p) show_preview ;; # toggle preview on/off
+            f|F) swww img "$image" --transition-type center;; # set as background
+            o) swayimg "$image" ;; # open externally
+            c) clear_scr && show_image ;;
+            x) clean_image && wl-copy "$image" ;;
+
+            $'\n'|$'\x0a') printf "%s\n" "${image}" 2>/dev/stdout && exit 0;;
+            q) exit 0 ;;
+
         esac
 
         unset K1 K2 K3
@@ -40,6 +288,7 @@ input_loop() {
         # shellcheck disable=2162
         read -sN1 -t 0.001
         K3="$REPLY"
+        # this will read full keysets like 'enter' and 'space' instead of just j or k
         key="$K1$K2$K3"
 
     done
@@ -49,3 +298,69 @@ input_loop() {
 trap cleanup EXIT
 # exit $?
 
+if [ -t 0 ]; then
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) print_help && exit 0 ;;
+        -v|--version) show_version && exit 0 ;;
+        -f|--find) shift && findcmd="${1}" ;;
+        -e|--ext) shift && extensions+=("${1}");;
+        -s|--stdin)  ;;
+        -w|--wall)  shift && wallpaper="${1}" ;;
+        -p|--preview) shift && img_protocol="${1}";;
+        *)  [ -d "$1" ] && dir="$1" ;;
+    esac
+    shift
+done
+
+# set command to find images
+if [ -z "$findcmd" ]; then
+    if command -v fd; then 
+        findcmd="fd"
+    elif command -v find; then
+        findcmd="find"
+    else
+        findcmd="bash"
+    fi
+fi
+
+if [ -z "${extensions[*]}" ]; then 
+        extensions=(-e png -e jpg -e gif -e webp)
+    else
+        extensions=("${extensions[@]/#/-e }")
+fi
+
+printf "%s " "${extensions[*]}"
+
+# sleep 10
+dir="${dir:-$HOME/Pictures}"
+[ ! -d "$dir" ] && dir="${HOME}"
+    find_images "$dir"
+else
+    # else pipe is open
+    mapfile array < <(cat -)
+    exec 0<&-
+fi
+
+
+# ╭───────────────────────────────╮
+# │      Intitialize Program      │
+# ╰───────────────────────────────╯
+
+show_pre=1
+[ -z "$img_protocol" ] && img_protocol="kitty"
+# show_menu=0
+# cmd_mode=0
+
+# x=0
+# size=0
+get_term_size
+size=$((LINES + 20))
+lx=2
+ly=2
+
+# garbled_load_text
+# tput cup $((LINES / 2)) $((COLUMNS / 2)) && cat_logo && sleep .5
+draw_box
+input_loop

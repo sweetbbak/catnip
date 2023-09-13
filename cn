@@ -262,7 +262,8 @@ bash_finder() {
     bash_dir="${1}"
     shopt -s globstar
     for wfile in "${bash_dir}"/**/*{.png,.gif,.webp,.jpg}; do 
-        printf "%s\n" "$wfile"
+        # printf "%s\n" "$wfile"
+        printf "%b\0" "$wfile"
     done
     shopt -u globstar
 }
