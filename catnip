@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# suppress output / hide cursor
+stty -echo
+tput civis
+
+cleanup() {
+    clear
+    tput cnorm
+    stty echo
+}
+
+# thanks dylan araps
+trim_string() {
+    # Usage: trim_string "   example   string    "
+    : "${1#"${1%%[![:space:]]*}"}"
+    : "${_%"${_##*[![:space:]]}"}"
+    printf '%s\n' "$_"
+}
+ 
+input_loop() {
+    tput civis
+    clear
+    while true; do
+        case "$key" in
+            j|$'\x1b\x5b\x41') if [ "$index" = 0 ]; then index=1 ; elif [ "$index" = 1 ]; then index=0 ; fi ;;
+            k|$'\x1b\x5b\x42') if [ "$index" = 0 ]; then index=1 ; elif [ "$index" = 1 ]; then index=0 ; fi ;;
+            $'\x0a') break ;;
+            *) echo >/dev/null ;;
+        esac
+
+        unset K1 K2 K3
+
+        # shellcheck disable=2162
+        read -sN1
+        K1="$REPLY"
+        # shellcheck disable=2162
+        read -sN2 -t 0.001
+        K2="$REPLY"
+        # shellcheck disable=2162
+        read -sN1 -t 0.001
+        K3="$REPLY"
+        key="$K1$K2$K3"
+
+    done
+
+}
+
+trap cleanup EXIT
+# exit $?
+
