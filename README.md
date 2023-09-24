@@ -4,19 +4,19 @@
 
 ---
 
-## ![](images/out.gif)
+## ![](images/out-opt.gif)
 
 - pick images from any directory (cn ~/Pictures/backgrounds || cn .)
 
 ---
 
-## ![](images/out1.gif)
+## ![](images/out1-opt.gif)
 
 - open in an external program (swww, feh, nitrogen, swayimg, nsxiv etc...)
 
 ---
 
-## ![](images/out2.gif)
+## ![](images/out2-opt.gif)
 
 - Run commands on an image - :fzf - lets you fuzzy find through your selected images
 - integration with other TUI's and CLI's (fzf, fd, ripgrep/grep, imagemagick)
