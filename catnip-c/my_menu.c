@@ -1,5 +1,6 @@
 #include <curses.h>
 #include <ncurses.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
@@ -47,7 +48,7 @@ void icat_old(char index_menu) {
     free(cmd);
 }
 
-void icat (char *dir) {
+void icat(char *dir) {
     static char prefix[] = "kitty +kitten icat --clear --place 69x69@2x2 ";
     // Use sizeof to allow for null char at end.
     char *cmd = malloc(sizeof (prefix) + strlen (dir));
@@ -57,6 +58,50 @@ void icat (char *dir) {
         system (cmd);
         free (cmd);
     }
+}
+
+char inputs() {
+    // Define the maximum number of lines to read (adjust as needed)
+    int max_lines = 100;
+
+    // Create an array of strings to store the lines
+    char *C[max_lines];
+
+    // Read input from stdin line by line
+    int i = 0;
+    char buffer[1024];  // Assuming lines are not longer than 1024 characters
+
+    while (i < max_lines && fgets(buffer, sizeof(buffer), stdin)) {
+        // Remove trailing newline character if present
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len - 1] == '\n') {
+            buffer[len - 1] = '\0';
+        }
+
+        // Allocate memory and store the line in the arread stdin pipe newline to array "C"ray
+        C[i] = strdup(buffer);
+
+        if (C[i] == NULL) {
+            perror("Memory allocation failed");
+            exit(EXIT_FAILURE);
+        }
+
+        i++;
+    }
+
+    // Print the array (optional)
+    for (int j = 0; j < i; j++) {
+        printf("C[%d]: %s\n", j, C[j]);
+    }
+
+    return **C;
+
+    // Free allocated memory
+    // for (int j = 0; j < i; j++) {
+    //     free(C[j]);
+    // }
+
+    // return 0;
 }
 
 int main() {

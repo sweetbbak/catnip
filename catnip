@@ -1,9 +1,12 @@
 #!/bin/bash
 
 # suppress output / hide cursor
-stty -echo
-tput civis
-tput smcup
+
+prepare_terminal() {
+    stty -echo
+    tput civis
+    tput smcup
+}
 
 show_version () {
 cat << EOF
@@ -13,9 +16,11 @@ EOF
 
 cleanup() {
     clear
-    tput cnorm
     tput rmcup
-    stty echo
+    stty echo </dev/tty
+    tput cnorm
+    printf "%s\n" "${image}"
+    exec 1>&3 3>&-  # restore stdout and close fd #3
 }
 
 unhide_cursor() {
@@ -37,36 +42,6 @@ trim_string() {
     : "${1#"${1%%[![:space:]]*}"}"
     : "${_%"${_##*[![:space:]]}"}"
     printf '%s\n' "$_"
-}
-
-blu_gradient=(
-    '\e[0;38;2;127;191;255m'
-    '\e[0;38;2;127;127;255m'
-    '\e[0;38;2;127;063;255m'
-    '\e[0;38;2;127;000;255m'
-    '\e[0;38;2;127;000;255m'
-    '\e[0;38;2;127;063;255m'
-    '\e[0;38;2;127;127;255m'
-    '\e[0;38;2;127;191;255m'
-)
-
-gradient() {
-    str="${*}"
-    # string=aaaaa ; ${string:0:5} var:index:length - starts at 0 indexing
-    array_index=0
-    color_index=0
-    str_len="${#str}"
-    # length to cut string into and change colors
-    length="$((str_len / 8))"
-
-    # color index loops in $length so if length=3 than its 0, 3, 6, 9 etc.. until string is ate up
-    while [[ $color_index -le $str_len ]]; do
-        printf '%b' "${blu_gradient[$array_index]}${str:$color_index:$length}"
-        color_index="$((color_index + length))"
-        array_index="$((array_index + 1))"
-    done
-    # needs a newline otherwise it leaves a % sign
-    printf "%s\n" ""
 }
 
 # Cursor to absolute position
@@ -96,7 +71,7 @@ cup_x_clear() { printf '\e[2J'; }
 # clear screen and move to Home
 cup_screen_home() { printf '\e[2J\e[H'; }
 
-draw_box() {
+draw_box_kitty() {
     tput clear
     # get_term_size
     horiz="$((COLUMNS - 1))"
@@ -126,6 +101,13 @@ draw_box() {
     cup "$((vert - 2))" 0 && cup_x_eol && printf '├'
     perl -E "print '─' x $horiz"
     cup_right 1 && printf '┤'
+}
+
+draw_box_sixel() {
+    printf '\e7\e[%sH\e[1;3;38;5;231;48;5;99m%*s\r\e[m\e[%sH\e[K\e8' \
+    "$((LINES-1))" \
+    "$COLUMNS" "" \
+    "$LINES"
 }
 
 clean_image() {
@@ -159,6 +141,13 @@ show_preview() {
 }
 
 search() {
+    # top line
+    tput cup 0 0
+    tput el
+    printf "\e[40m\e[2K%s\e[0m\e[2;0H" "${count} ${image}"
+    tput cup 1 0
+
+    # bottom line
     tput cup "$((LINES / 2 + LINES / 4))" 0
     XX=$(printf "%s\n" "${array[@]}" | fzf --cycle --reverse --height=5% \
         --bind 'enter:execute(printf {n} 2> /dev/stdout)+abort')
@@ -170,7 +159,6 @@ search() {
 
 pick-dir() {
     directory="${2:-$HOME}"
-
     tput cup "$((LINES / 2 + LINES / 4))" 0
     dirpick=$(fd . "$directory" -td --absolute-path | fzf --cycle --reverse --height=5% \
         --bind 'enter:execute(printf {} 2> /dev/stdout)+abort')
@@ -217,8 +205,8 @@ show_image() {
     image="${image// /\ }"
 
     # tput cup 1 1 ; tput ech "$((${#image}+9))"
-    tput cup 1 1 ; tput ech "$((COLUMNS - 3))"
-    gradient "|${count} | ${image}"
+    tput cup 0 1 ; tput ech "$((COLUMNS - 3))"
+    printf "%s" "${count} | ${image}"
 
     if [[ "$show_pre" -eq 1 ]]; then
         case "$img_protocol" in
@@ -239,13 +227,15 @@ show_image() {
     fi
 }
 
-
+set-backfround() {
+    ls
+}
 
 input_loop() {
     tput civis
     clear
     while true; do
-
+    draw_box_sixel
     # constantly poll array len
     array_count="${#array[@]}"
     # string for displaying in menu bar
@@ -265,20 +255,18 @@ input_loop() {
             $' '|$'\x20') show_menu=1 ;; # space key
             # $'\x1b') echo Escape Key ;; # escape key
             i|:|\;) cmdd ;; # insert
-
             p) show_preview ;; # toggle preview on/off
-            f|F) swww img "$image" --transition-type center;; # set as background
+            f|F) set-background ;; # set as background
             o) swayimg "$image" ;; # open externally
             c) clear_scr && show_image ;;
             x) clean_image && wl-copy "$image" ;;
 
-            $'\n'|$'\x0a') printf "%s\n" "${image}" 2>/dev/stdout && exit 0;;
+            $'\n'|$'\x0a') printf "%s\n" "${image}" && exit 0;;
             q) exit 0 ;;
 
         esac
 
         unset K1 K2 K3
-
         # shellcheck disable=2162
         read -sN1
         K1="$REPLY"
@@ -290,7 +278,6 @@ input_loop() {
         K3="$REPLY"
         # this will read full keysets like 'enter' and 'space' instead of just j or k
         key="$K1$K2$K3"
-
     done
 
 }
@@ -298,7 +285,9 @@ input_loop() {
 trap cleanup EXIT
 # exit $?
 
+# if stdin is connected
 if [ -t 0 ]; then
+
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -306,8 +295,7 @@ while [ $# -gt 0 ]; do
         -v|--version) show_version && exit 0 ;;
         -f|--find) shift && findcmd="${1}" ;;
         -e|--ext) shift && extensions+=("${1}");;
-        -s|--stdin)  ;;
-        -w|--wall)  shift && wallpaper="${1}" ;;
+        -|-s|--stdin) while read -r i; do array+=("${i}"); done ;;
         -p|--preview) shift && img_protocol="${1}";;
         *)  [ -d "$1" ] && dir="$1" ;;
     esac
@@ -331,18 +319,21 @@ if [ -z "${extensions[*]}" ]; then
         extensions=("${extensions[@]/#/-e }")
 fi
 
-printf "%s " "${extensions[*]}"
+# printf "%s " "${extensions[*]}"
 
 # sleep 10
 dir="${dir:-$HOME/Pictures}"
 [ ! -d "$dir" ] && dir="${HOME}"
     find_images "$dir"
 else
-    # else pipe is open
     mapfile array < <(cat -)
     exec 0<&-
 fi
 
+exec 3>&1  # send stdout to fd 3
+exec >&2   # send stdout to stderr
+stty -echo </dev/tty
+tput civis
 
 # ╭───────────────────────────────╮
 # │      Intitialize Program      │
@@ -350,8 +341,8 @@ fi
 
 show_pre=1
 [ -z "$img_protocol" ] && img_protocol="kitty"
-# show_menu=0
-# cmd_mode=0
+show_menu=0
+cmd_mode=0
 
 # x=0
 # size=0
@@ -360,7 +351,6 @@ size=$((LINES + 20))
 lx=2
 ly=2
 
-# garbled_load_text
-# tput cup $((LINES / 2)) $((COLUMNS / 2)) && cat_logo && sleep .5
-draw_box
+draw_box_sixel
+draw_box_kitty
 input_loop
