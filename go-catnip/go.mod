@@ -1,16 +1,7 @@
 module catnip
 
-go 1.20
+go 1.21.2
 
-require (
-	github.com/dolmen-go/kittyimg v0.0.0-20220904140504-22f6493b700f
-	github.com/gdamore/tcell v1.4.0
-)
+require github.com/pkg/term v1.1.0
 
-require (
-	github.com/gdamore/encoding v1.0.0 // indirect
-	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
-	github.com/mattn/go-runewidth v0.0.9 // indirect
-	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
-	golang.org/x/text v0.3.0 // indirect
-)
+require golang.org/x/sys v0.0.0-20200909081042-eff7692f9009 // indirect

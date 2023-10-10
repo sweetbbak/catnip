@@ -1,193 +1,166 @@
 package main
 
 import (
-	"embed"
-	"flag"
+	"bufio"
+	"bytes"
 	"fmt"
-	"time"
-
-	// "image"
-	// "image/gif"
-	// "image/png"
-	"io/fs"
+	"github.com/pkg/term"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"regexp"
+	"strconv"
 	"strings"
-
-	// "github.com/dolmen-go/kittyimg"
-	"github.com/gdamore/tcell"
+	"syscall"
+	"unsafe"
 )
 
-// note that its var type in (var type) and return type (var type) return_type
-func visit(path string, di fs.DirEntry, err error) error {
-	fmt.Printf(path)
-	return nil
-}
+var intbuf = make([]byte, 0, 16)
 
-// example of counting all files in a root directory
-func countFiles(root string) []string {
-	// array := make(map[string][]string)
-	// use this because idk what that make map shit was lol
-	var array []string
-	filepath.WalkDir(root, func(path string, file fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !file.IsDir() {
-			// Get the file extension
-			ext := filepath.Ext(path)
-
-			// match file extension
-			switch ext {
-			case ".jpg":
-				array = append(array, path)
-			case ".png":
-				array = append(array, path)
-			case ".webp":
-				array = append(array, path)
-			case ".gif":
-				array = append(array, path)
-			}
-		}
-		return nil
-	})
-	// return nil
-	return array
-}
-
-func find(root, ext string) []string {
-	var a []string
-	filepath.WalkDir(root, func(s string, d fs.DirEntry, e error) error {
-		if e != nil {
-			return e
-		}
-		if filepath.Ext(d.Name()) == ext {
-			a = append(a, s)
-		}
-		return nil
-	})
-	return a
-}
-
-var files embed.FS
-
-func show_image(path string) {
-	path = filepath.Clean(path)
-	// path = regexp.MustCompile(`[^a-zA-Z0-9 ]+`).ReplaceAllString(path, "")/[/\\?%*:|"<>]/g, '-'
-	// path = regexp.MustCompile(`/([^a-z0-9]+)/gi, '-'`).ReplaceAllString(path, "")
-	path = regexp.MustCompile(`/[/\\?%*:|'"<>]/g, '-'`).ReplaceAllString(path, "")
-	path = strings.ReplaceAll(path, "U+0022", "")
-	path = strings.TrimSuffix(path, "\n")
-	// path = strings.TrimSuffix(path, "")
-	// path = strings.Replace("/^\n|\n$/g", '')
-	// cmd := exec.Command("kitty", "+kitten", "icat", "--clear", "--scale-up", "--place", "80x80@0x2", path, ">", "/dev/tty")
-	// cmd := exec.Command("kitty", "+kitten", "icat", "--clear", "--scale-up", "--place", "80x80@0x2", path)
-	// cmd := exec.Command("bash", "-c", "kitty", "+kitten", "icat", "--clear", path)
-	cmd := exec.Command("chafa", "-f", "kitty", path)
-	fmt.Println(cmd)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		fmt.Println(err)
-	}
-	// if err := cmd.Start(); err != nil {
-	// 	fmt.Println(err)
-	// }
-	// fmt.Println(stdout)
-	// out, err := cmd.Output()
-	// if err != nil {
-	// 	fmt.Println("could not run command", err)
-	// }
-	// fmt.Println(string(out))
-
-	// f, err := files.Open(path)
-	// f, err := os.Open("/home/sweet/ssd/gallery-dl/twitter/050_37458/1645038571349491712_1.jpg")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// defer f.Close()
-	// img, _, err := image.Decode(f)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// kittyimg.Fprintln(os.Stdout, img)
-	// kittyimg.Fprint(os.Stdout, img)
-
-}
-
-func prep_terminal() {
-	// disable input buffering
-	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
-	// do not display entered characters on the screen
-	exec.Command("stty", "-F", "/dev/tty", "-echo").Run()
-}
-
-func garbage_keys() {
-	var b []byte = make([]byte, 1)
-	for {
-		os.Stdin.Read(b)
-		fmt.Println("I got the byte", b, "("+string(b)+")")
-	}
+type winsize struct {
+	rows    uint16
+	cols    uint16
+	xpixels uint16
+	ypixels uint16
 }
 
 func main() {
-	flag.Parse()
-	root := flag.Arg(0)
-	if root == "" {
-		root = os.Getenv("HOME") + "/Pictures"
-	}
-	x := countFiles(root)
-	for z := range x {
-		println(x[z])
+	m := []string{}
+	s := bufio.NewScanner(os.Stdin)
+	for s.Scan() {
+		m = append(m, s.Text())
 	}
 
-	show_image(x[1])
-	time.Sleep(10)
-	i := 0
-	s, err := tcell.NewScreen()
-	if err != nil {
-		fmt.Println(err)
+	fmt.Println()
+	write_cursor(10, 10)
+	x, _ := os.Open("/dev/tty")
+	col, _ := get_term_size(x.Fd())
+	cols := int(float64(col) * 0.5)
+	System("clear")
+
+	a := 100
+	// i := 0
+	arrayLen := len(m)
+	index := 0
+	// b := 0
+	// kit := strings.Join([]string{"kitten icat --transfer-mode=memory --clear --stdin=no", stwing, m[index]}, " ")
+	// stwing := fmt.Sprintf("--place=%vx%v@%vx0", cols, cols, cols)
+	// kit := strings.Join([]string{"kitten icat --transfer-mode=stream --clear --stdin=no", stwing, m[index]}, " ")
+
+	for a != 27 {
+		a, _, _ = getChar()
+		switch a {
+		case int('j'):
+			index = dec(index, arrayLen)
+			fmt.Println(index)
+			stwing := fmt.Sprintf("--place=%vx%v@%vx0", cols, cols, cols)
+			kit := strings.Join([]string{"kitten icat --transfer-mode=stream --clear --stdin=no", stwing, m[index]}, " ")
+			System(kit)
+			fmt.Println("j")
+		case int('k'):
+			index = inc(index, arrayLen)
+			stwing := fmt.Sprintf("--place=%vx%v@%vx0", cols, cols, cols)
+			kit := strings.Join([]string{"kitten icat --transfer-mode=stream --clear --stdin=no", stwing, m[index]}, " ")
+			System(kit)
+			fmt.Println("k")
+		}
 	}
 
-	if err := s.Init(); err != nil {
-		fmt.Println(err)
+}
+
+func inc(i int, arrayLen int) int {
+	if i == arrayLen-1 {
+		return 0
+	} else {
+		return i + 1
+	}
+}
+
+func dec(i int, arrayLen int) int {
+	if i == 0 {
+		return arrayLen - 1
+	} else {
+		return i - 1
+	}
+}
+
+func System(cmd string) int {
+	c := exec.Command("sh", "-c", cmd)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	err := c.Run()
+
+	if err == nil {
+		return 0
 	}
 
-	// clear screen
-	// s.Clear()
-
-	quit := func() { s.Fini(); os.Exit(0) }
-	defer quit()
-	for {
-		// s.Show()
-		ev := s.PollEvent()
-		// show_image(x[i])
-		switch ev := ev.(type) {
-		// case *tcell.EventResize:
-		// s.Sync()
-		case *tcell.EventKey:
-			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
-				return
-			} else if ev.Key() == tcell.KeyCtrlL {
-				// s.Sync()
-			} else if ev.Rune() == 'C' || ev.Rune() == 'c' {
-				// s.Clear()
-			} else if ev.Rune() == 'j' || ev.Rune() == 'j' {
-				// s.Clear()
-				i--
-				// fmt.Println(x[i])
-				show_image(x[i])
-			} else if ev.Rune() == 'k' || ev.Rune() == 'K' {
-				s.Clear()
-				i++
-				// fmt.Println(x[i])
-				show_image(x[i])
-			}
-
+	// Figure out the exit code
+	if ws, ok := c.ProcessState.Sys().(syscall.WaitStatus); ok {
+		if ws.Exited() {
+			return ws.ExitStatus()
 		}
 
+		if ws.Signaled() {
+			return -int(ws.Signal())
+		}
 	}
+
+	return -1
+}
+
+func write_cursor(x, y int) {
+	outbuf := new(bytes.Buffer)
+	outbuf.WriteString("\033[")
+	outbuf.Write(strconv.AppendUint(intbuf, uint64(y+1), 10))
+	outbuf.WriteString(";")
+	outbuf.Write(strconv.AppendUint(intbuf, uint64(x+1), 10))
+	outbuf.WriteString("H")
+}
+
+func get_term_size(fd uintptr) (int, int) {
+	var sz winsize
+	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL,
+		fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&sz)))
+	return int(sz.cols), int(sz.rows)
+}
+
+func char_c(t *term.Term) {
+}
+
+// Returns either an ascii code, or (if input is an arrow) a Javascript key code.
+func getChar() (ascii int, keyCode int, err error) {
+	t, _ := term.Open("/dev/tty")
+	term.RawMode(t)
+	bytes := make([]byte, 3)
+
+	var numRead int
+	numRead, err = t.Read(bytes)
+	if err != nil {
+		return
+	}
+	if numRead == 3 && bytes[0] == 27 && bytes[1] == 91 {
+		// Three-character control sequence, beginning with "ESC-[".
+
+		// Since there are no ASCII codes for arrow keys, we use
+		// Javascript key codes.
+		if bytes[2] == 65 {
+			// Up
+			keyCode = 38
+		} else if bytes[2] == 66 {
+			// Down
+			keyCode = 40
+		} else if bytes[2] == 67 {
+			// Right
+			keyCode = 39
+		} else if bytes[2] == 68 {
+			// Left
+			keyCode = 37
+		}
+	} else if numRead == 1 {
+		ascii = int(bytes[0])
+	} else {
+		// Two characters read??
+	}
+	t.Restore()
+	t.Close()
+	return
 }
