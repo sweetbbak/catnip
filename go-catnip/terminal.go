@@ -10,19 +10,22 @@ import (
 	"unsafe"
 )
 
-const (
-	gets = unix.TIOCGETD
-	sets = unix.TIOCSETD
-)
-
-func gtty(fd int) (*unix.Termios, error) {
-	// term, err := unix.IoctlGetTermios(fd, syscall.TIOCGETD)
-	term, err := unix.IoctlGetTermios(fd, gets)
+func rawer() {
+	STDINFILENO := 0
+	raw, err := unix.IoctlGetTermios(STDINFILENO, unix.TCGETA)
 	if err != nil {
-		// fmt.Println(err)
-		return nil, err
+		panic(err)
 	}
-	return term, err
+	rawState := *raw
+	rawState.Lflag &^= unix.ECHO
+
+	// err = unix.IoctlSetTermios(STDINFILENO, unix.TCSAFLUSH, &rawState)
+	err = unix.IoctlSetTermios(STDINFILENO, unix.TCSETA, &rawState)
+	// err = unix.IoctlSetTermios(STDINFILENO, unix.BPF_TCP_CLOSE, &rawState)
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 func System(cmd string) int {
@@ -52,6 +55,7 @@ func System(cmd string) int {
 // Returns either an ascii code, or (if input is an arrow) a Javascript key code.
 func getChar() (ascii int, keyCode int, err error) {
 	t, _ := term.Open("/dev/tty")
+
 	term.RawMode(t)
 	bytes := make([]byte, 3)
 
@@ -88,6 +92,20 @@ func getChar() (ascii int, keyCode int, err error) {
 	return
 }
 
+type winsize struct {
+	rows    uint16
+	cols    uint16
+	xpixels uint16
+	ypixels uint16
+}
+
+func get_term_size(fd uintptr) (int, int) {
+	var sz winsize
+	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL,
+		fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&sz)))
+	return int(sz.cols), int(sz.rows)
+}
+
 func updateWSCol() error {
 	ws, err := unix.IoctlGetWinsize(syscall.Stdout, unix.TIOCGWINSZ)
 	if err != nil {
@@ -98,6 +116,7 @@ func updateWSCol() error {
 	return nil
 }
 
+// example
 func xmain() {
 	fmt.Print("Enter your secret password: ")
 
@@ -124,6 +143,7 @@ func makeRaw(fd uintptr) (*unix.Termios, error) {
 
 	newState := oldState
 	newState.Lflag &^= unix.ECHO
+	newState.Lflag &= unix.ECHO
 
 	_, _, err = syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(unix.TCSETS), uintptr(unsafe.Pointer(&newState)))
 	if err != 0 {
