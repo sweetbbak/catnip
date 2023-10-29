@@ -14,16 +14,26 @@ var (
 	wsrow int
 )
 
-func render() {
-	// fmt.Print("\x1b[H\x1b[2J") // clear screen
+func render(str string) {
+	// setup
 	fmt.Print("\x1b[H")
 	fmt.Print("\x1b7")       // save the cursor position
 	fmt.Print("\x1b[2k")     // erase the current line
 	defer fmt.Print("\x1b8") // restore the cursor position
 
-	bgline := strings.Repeat(" ", wscol)
-	fmt.Printf("\x1b[48;5;62m%s\x1b[0m", bgline)
-	fmt.Printf("\x1b[48;5;62m%d\x1b[0m", wscol)
+	strlen := len(str)
+	bglen := wscol - strlen
+	bgline := strings.Repeat(" ", bglen)
+
+	// header
+	fmt.Printf("\x1b[48;5;62m%s%s\x1b[0m", str, bgline)
+
+	for i := 0; i < wsrow+1; i++ {
+		// fmt.Printf("\x1b[48;5;62m\x1b[1B%s", " ")
+		// fmt.Printf("\x1b[%d;1f\x1b[48;5;62m%s", i, " ")
+		fmt.Printf("\x1b[%d;1f\x1b[48;5;62m%s", i, " ")
+		fmt.Printf("\x1b[%d;%df\x1b[48;5;62m%s", i, wscol, " ")
+	}
 
 }
 
@@ -31,6 +41,18 @@ func updateSize() {
 	x, _ := os.Open("/dev/tty")
 	defer x.Close()
 	wscol, wsrow = get_term_size(x.Fd())
+}
+
+func clear() {
+	fmt.Print("\x1b[2J") // clear screen
+}
+
+func cup() {
+	fmt.Print("\x1b[2J") // clear screen
+}
+
+func cdown() {
+	fmt.Print("\x1b[2J") // clear screen
 }
 
 func unhide_cursor() {
@@ -119,17 +141,15 @@ func main() {
 	var a int
 	a = 100
 	for a != 27 {
-		render()
+		render(imgs[index])
 		showImage(imgs[index])
 
 		a, _, _ = getChar()
 		switch a {
 		case int('j'):
 			index = dec(index, arrayLen)
-			fmt.Printf("\n\n\n%d\n", a)
 		case int('k'):
 			index = inc(index, arrayLen)
-			fmt.Printf("\n\n\n%d\n", a)
 		}
 
 	}
