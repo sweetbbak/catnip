@@ -115,6 +115,15 @@ clean_image() {
     image="${image// /\ }"
 }
 
+redraw() {
+    get_term_size
+    tput clear
+    clear
+    draw_box
+    show_image
+}
+
+
 find_images() {
     dir="${1}"
     case "$findcmd" in 
