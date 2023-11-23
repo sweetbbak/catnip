@@ -7,6 +7,9 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -56,7 +59,10 @@ func cdown() {
 }
 
 func unhide_cursor() {
+	// show cursor
 	fmt.Printf("\x1b[?25h")
+	// exit alt-screen
+	fmt.Printf("\x1b[?1049h")
 }
 
 func hide_cursor() {
@@ -90,9 +96,32 @@ func dec(i int, arrayLen int) int {
 
 func showImage(img string) {
 	cols := wscol / 2
-	stwing := fmt.Sprintf("--place=%vx%v@%vx0", cols, cols, cols)
-	kit := strings.Join([]string{"kitten icat --transfer-mode=stream --clear --stdin=no", stwing, img}, " ")
+	// XxY@XxY
+	// stwing := fmt.Sprintf("--place=%vx%v@%vx2", cols, cols, cols)
+	stwing := fmt.Sprintf("--place=%vx%v@1x1", cols, cols)
+	kit := strings.Join([]string{"kitten icat --transfer-mode=stream --clear --stdin=no", stwing, img, "1>&2"}, " ")
 	System(kit)
+}
+
+// check of stdin or stdout are connected to terminal or pipe
+func stdx_open(file *os.File) {
+	fi, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+
+	if (fi.Mode() & os.ModeNamedPipe) != 0 {
+		fmt.Println("data is from pipe")
+	} else {
+		fmt.Println("data is from terminal")
+	}
+}
+
+func exitCleanup(oldState *unix.Termios) {
+	restoreTerminal(os.Stdin.Fd(), oldState)
+	unhide_cursor()
+	clear()
+	os.Exit(0)
 }
 
 func main() {
@@ -109,25 +138,44 @@ func main() {
 		}
 	}()
 
+	// 0 1 2 etc...
 	oldState, err := makeRaw(os.Stdin.Fd())
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	// check for ctrl-c signal
-	signalChan := make(chan os.Signal)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	sigkill := make(chan os.Signal, 1)
+	defer close(sigkill)
+	signal.Notify(sigkill, syscall.SIGKILL, syscall.SIGTERM)
 	go func() {
-		<-signalChan
-		restoreTerminal(os.Stdin.Fd(), oldState)
-		os.Exit(1)
+		for {
+			if _, ok := <-sigwinch; !ok {
+				return
+			}
+			restoreTerminal(os.Stdin.Fd(), oldState)
+			os.Exit(0)
+		}
 	}()
 
-	fmt.Print("\x1b[H\x1b[2J") // clear screen
-	x, _ := os.Open("/dev/tty")
-	defer x.Close()
+	// check for ctrl-c signal
+	// signalChan := make(chan os.Signal)
+	// signal.Notify(signalChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	// go func() {
+	// 	<-signalChan
+	// 	restoreTerminal(os.Stdin.Fd(), oldState)
+	// 	unhide_cursor()
+	// 	os.Exit(1)
+	// }()
 
-	wscol, wsrow = get_term_size(x.Fd())
+	// x, _ := os.Open("/dev/tty")
+	// x, _ := os.Open("/dev/tty")
+	// defer x.Close()
+
+	// alt screen
+	fmt.Printf("\x1b[?1049h")
+
+	// wscol, wsrow = get_term_size(x.Fd())
+	wscol, wsrow = get_term_size(os.Stdout.Fd())
 	fmt.Print("\x1b[H\x1b[2J") // clear screen
 	hide_cursor()
 
@@ -136,22 +184,34 @@ func main() {
 
 	imgs := readStdin()
 	arrayLen := len(imgs)
-	index := 0
 
+	if arrayLen == 0 {
+		// exit gracefully
+		exitCleanup(oldState)
+	}
+
+	index := 0
 	var a int
+	var b int
+	// set first keypress
 	a = 100
+
+	// 27 == ESC
 	for a != 27 {
 		render(imgs[index])
 		showImage(imgs[index])
 
-		a, _, _ = getChar()
+		a, b, _ = getChar()
 		switch a {
 		case int('j'):
 			index = dec(index, arrayLen)
 		case int('k'):
 			index = inc(index, arrayLen)
+		case int('q'):
+			exitCleanup(oldState)
+		default:
+			fmt.Printf("\n\n\n\n %d | %d", a, b)
 		}
-
+		time.Sleep(time.Millisecond * 10)
 	}
-
 }
